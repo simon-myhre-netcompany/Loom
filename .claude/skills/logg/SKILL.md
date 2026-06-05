@@ -35,10 +35,12 @@ Every event has the same shape, so you can merge sources freely:
 - **calendar** — `calendar events` → Apple Calendar meetings & events (local,
   EventKit). Note the `Birthdays` / `Siri Suggestions` / holiday calendars are
   noise — focus on real meetings when drafting status.
-- **jira** — `jira issues` → issues you're assigned to / logged work on. Issue
-  keys (e.g. `UKESASADF-1917`) also appear in GitHub PR/commit titles, so use
-  them to stitch a ticket's code + status into one story. `#TIL_KUNDE` in
-  comments marks customer-facing updates.
+- **jira** — `jira issues` → issues you're assigned to / logged work on; and
+  `jira comments` → comments you posted (events typed `comment-til-kunde` are
+  your `#TIL_KUNDE` customer updates). Issue keys (e.g. `UKESASADF-1917`) also
+  appear in GitHub PR/commit titles, so use them to stitch a ticket's code +
+  status + customer comms into one story. `jira comments --key ABC-1` pulls a
+  specific ticket.
 
 - **confluence** — `confluence pages` → pages you've edited, incl. your weekly
   status page ("Status Team Arkiv"). Read the previous status page for tone and

@@ -12,11 +12,11 @@ See [`GOAL.md`](./GOAL.md) for the full motivation, design, and roadmap.
 - ✅ **Tempo** worklogs (read-only)
 - ✅ **GitHub** PRs & commits you authored, across accounts/orgs (read-only)
 - ✅ **Apple Calendar** events, local via EventKit (read-only)
-- ✅ **Jira** issues you work on (read-only)
+- ✅ **Jira** issues you work on + your comments incl. `#TIL_KUNDE` (read-only)
 - ✅ **Confluence** pages you edited — incl. your weekly status (read-only)
 - ✅ **Slack** messages you sent, across workspaces (read-only)
 - ✅ **Apple Mail** sent messages, local via Mail.app (read-only)
-- ⬜ Teams (Graph, high friction), `jira comments`, Azure DevOps, local git — backlog (see GOAL.md)
+- ⬜ Teams (Graph, high friction), Azure DevOps, local git — backlog (see GOAL.md)
 
 Everything is **read-only**. Writing (filling Tempo, posting comments, etc.) is
 a deliberate later phase.

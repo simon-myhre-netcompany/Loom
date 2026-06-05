@@ -142,8 +142,6 @@ Agreed to do later, captured so we don't lose them:
   consent; possibly metered). High friction — parked. Note: there is **no
   Netcompany Slack**, only Teams; Oslo kommune has both. Calendar already covers
   the meeting side of Teams.
-- **`jira comments`** — a second Jira action to fetch issue comments, to surface
-  `#TIL_KUNDE` customer-facing updates and drive follow-up reminders.
 - **Second Slack workspace** — only if a non-Oslo Slack ever appears (today the
   Oslo kommune workspace is the only Slack).
 - **Azure DevOps / local git** — easy PAT/zero-auth wins if code/work items live

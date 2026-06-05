@@ -37,6 +37,46 @@ interface SearchResponse {
   nextPageToken?: string;
 }
 
+export interface JiraComment {
+  id: string;
+  author?: { accountId?: string; displayName?: string };
+  body?: string; // v2 endpoint returns a plain string
+  created?: string;
+  updated?: string;
+}
+
+/** The authenticated user's accountId. */
+export async function getMyAccountId(base: string, email: string, token: string): Promise<string> {
+  const headers = { Authorization: basicAuthHeader(email, token) };
+  const me = await fetchJson<{ accountId: string }>(`${base}/rest/api/3/myself`, { headers });
+  return me.accountId;
+}
+
+/**
+ * All comments on an issue, via the v2 endpoint (plain-string bodies — no ADF).
+ * Paginated by startAt/total.
+ */
+export async function getComments(
+  base: string,
+  email: string,
+  token: string,
+  issueKey: string
+): Promise<JiraComment[]> {
+  const headers = { Authorization: basicAuthHeader(email, token) };
+  const out: JiraComment[] = [];
+  let startAt = 0;
+  for (let page = 0; page < 20; page++) {
+    const res = await fetchJson<{ comments?: JiraComment[]; total?: number; maxResults?: number }>(
+      `${base}/rest/api/2/issue/${encodeURIComponent(issueKey)}/comment?startAt=${startAt}&maxResults=100`,
+      { headers }
+    );
+    out.push(...(res.comments ?? []));
+    startAt += res.maxResults ?? 100;
+    if (startAt >= (res.total ?? 0)) break;
+  }
+  return out;
+}
+
 export async function searchIssues(params: SearchParams): Promise<JiraIssue[]> {
   const { base, email, token, jql, fields, pageLimit = 10 } = params;
   const url = `${base}/rest/api/3/search/jql`;

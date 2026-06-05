@@ -203,6 +203,14 @@ export const CONNECTORS: ConnectorSpec[] = [
           { key: 'jql', label: 'Custom JQL? (blank = your recent issues)', prompt: false },
         ],
       },
+      {
+        name: 'comments',
+        description: 'Comments you posted on your issues (tags #TIL_KUNDE)',
+        prompts: [
+          { key: 'since', label: 'Look back how far? (e.g. 7d, 2w, YYYY-MM-DD)', default: '7d' },
+          { key: 'key', label: 'Specific issue key(s)? (comma-sep, blank = your recent issues)', prompt: false },
+        ],
+      },
     ],
     setup: [
       {
