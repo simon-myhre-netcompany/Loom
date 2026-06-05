@@ -10,7 +10,8 @@ See [`GOAL.md`](./GOAL.md) for the full motivation, design, and roadmap.
 ## Status
 
 - ✅ **Tempo** worklogs (read-only)
-- ⬜ git, Jira, Confluence, calendar, Slack — planned (see GOAL.md roadmap)
+- ✅ **GitHub** PRs & commits you authored, across accounts/orgs (read-only)
+- ⬜ Jira, Confluence, calendar, Slack — planned (see GOAL.md roadmap)
 
 Everything is **read-only**. Writing (filling Tempo, posting comments, etc.) is
 a deliberate later phase.

@@ -28,6 +28,7 @@ export type Source =
   | 'tempo'
   | 'jira'
   | 'git'
+  | 'github'
   | 'calendar'
   | 'confluence'
   | 'slack'

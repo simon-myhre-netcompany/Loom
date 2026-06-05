@@ -4,6 +4,7 @@
  */
 import type { ActivityEvent } from './types.js';
 import * as tempo from './connectors/tempo/index.js';
+import * as github from './connectors/github/index.js';
 
 /** A flag an action accepts, with metadata for prompting in interactive mode. */
 export interface PromptSpec {
@@ -79,6 +80,61 @@ export const CONNECTORS: ConnectorSpec[] = [
           '  TEMPO_ACCOUNT_ID in .env.',
           'Without it, Logger fetches every worklog the token can see',
           '(the whole org) instead of just yours — so set it.',
+        ],
+      },
+    ],
+  },
+  {
+    source: 'github',
+    description: 'GitHub PRs & commits you authored (across accounts/orgs)',
+    run: github.run,
+    actions: [
+      {
+        name: 'prs',
+        description: 'Pull requests you authored, with activity in the range',
+        prompts: [
+          { key: 'since', label: 'Look back how far? (e.g. 7d, 2w, YYYY-MM-DD)', default: '7d' },
+          { key: 'until', label: 'Up until? (YYYY-MM-DD, blank = today)', prompt: false },
+        ],
+      },
+      {
+        name: 'commits',
+        description: 'Commits you authored (default branches) in the range',
+        prompts: [
+          { key: 'since', label: 'Look back how far? (e.g. 7d, 2w, YYYY-MM-DD)', default: '7d' },
+          { key: 'until', label: 'Up until? (YYYY-MM-DD, blank = today)', prompt: false },
+        ],
+      },
+    ],
+    setup: [
+      {
+        env: 'GITHUB_TOKEN_PERSONAL',
+        required: true,
+        steps: [
+          'A fine-grained PAT is locked to ONE resource owner, so make one per',
+          'account/org. This one is for your PERSONAL repos:',
+          'GitHub → Settings → Developer settings → Personal access tokens →',
+          '  Fine-grained tokens → "Generate new token".',
+          'Resource owner: your personal account. Repository access: all repos',
+          '  (or just the ones you want logged).',
+          'Permissions (read-only): Metadata: Read, Contents: Read,',
+          '  Pull requests: Read.',
+          'Generate, copy, set GITHUB_TOKEN_PERSONAL in .env, then register:',
+          '  logger keys add --env GITHUB_TOKEN_PERSONAL --expires <date> \\',
+          '    --label "GitHub PAT (personal)" --source github',
+        ],
+      },
+      {
+        env: 'GITHUB_TOKEN_OSLO',
+        required: false,
+        steps: [
+          'A SECOND fine-grained PAT, this time with Resource owner set to the',
+          '  oslo-kommune organisation (so it can see org repos you work on).',
+          'Same read-only permissions: Metadata, Contents, Pull requests = Read.',
+          'Note: org tokens may need an admin to approve them before they work.',
+          'Set GITHUB_TOKEN_OSLO in .env and register its expiry as above.',
+          'Logger reads every GITHUB_TOKEN / GITHUB_TOKEN_* var and merges them,',
+          'so add as many orgs as you like with more GITHUB_TOKEN_<NAME> vars.',
         ],
       },
     ],
