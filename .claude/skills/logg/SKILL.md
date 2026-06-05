@@ -30,9 +30,11 @@ Every event has the same shape, so you can merge sources freely:
 ### Available connectors
 
 - **tempo** — `tempo worklogs` → your logged hours (source of truth for time).
+- **github** — `github prs` and `github commits` → PRs and commits you authored,
+  merged across your personal account and the oslo-kommune org.
 
-(More land over time: git, jira, confluence, calendar. Check `logger --help`
-for what's currently wired up before assuming a source exists.)
+(More land over time: jira, confluence, calendar. Check `logger --help` for
+what's currently wired up before assuming a source exists.)
 
 ## What to produce
 
