@@ -35,8 +35,12 @@ Every event has the same shape, so you can merge sources freely:
 - **calendar** — `calendar events` → Apple Calendar meetings & events (local,
   EventKit). Note the `Birthdays` / `Siri Suggestions` / holiday calendars are
   noise — focus on real meetings when drafting status.
+- **jira** — `jira issues` → issues you're assigned to / logged work on. Issue
+  keys (e.g. `UKESASADF-1917`) also appear in GitHub PR/commit titles, so use
+  them to stitch a ticket's code + status into one story. `#TIL_KUNDE` in
+  comments marks customer-facing updates.
 
-(More land over time: jira, confluence. Check `logger --help` for what's
+(More land over time: confluence, slack. Check `logger --help` for what's
 currently wired up before assuming a source exists.)
 
 ## What to produce

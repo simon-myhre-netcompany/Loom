@@ -6,6 +6,7 @@ import type { ActivityEvent } from './types.js';
 import * as tempo from './connectors/tempo/index.js';
 import * as github from './connectors/github/index.js';
 import * as calendar from './connectors/calendar/index.js';
+import * as jira from './connectors/jira/index.js';
 
 /** A flag an action accepts, with metadata for prompting in interactive mode. */
 export interface PromptSpec {
@@ -182,6 +183,53 @@ export const CONNECTORS: ConnectorSpec[] = [
           '   Privacy & Security → Calendars and enable your terminal app.',
           '',
           'That is it — then `logger calendar events --since 14d` works.',
+        ],
+      },
+    ],
+  },
+  {
+    source: 'jira',
+    description: 'Jira issues you work on (assignee / worklog author)',
+    run: jira.run,
+    actions: [
+      {
+        name: 'issues',
+        description: 'Issues updated in the range that you are involved in',
+        prompts: [
+          { key: 'since', label: 'Look back how far? (e.g. 7d, 2w, YYYY-MM-DD)', default: '7d' },
+          { key: 'jql', label: 'Custom JQL? (blank = your recent issues)', prompt: false },
+        ],
+      },
+    ],
+    setup: [
+      {
+        env: 'JIRA_API_TOKEN',
+        required: true,
+        steps: [
+          'Atlassian API token (used as Basic auth with your email):',
+          'Go to https://id.atlassian.com/manage-profile/security/api-tokens',
+          '  → "Create API token".',
+          'Name: LOGGER. Set an expiry (e.g. 365 days).',
+          'Copy the token and set JIRA_API_TOKEN in .env, then register:',
+          '  logger keys add --env JIRA_API_TOKEN --expires <date> \\',
+          '    --label "Atlassian API token (LOGGER)" --source jira',
+        ],
+      },
+      {
+        env: 'JIRA_EMAIL',
+        required: true,
+        steps: [
+          'The email of your Atlassian account (the Basic-auth username).',
+          'For Oslo kommune that is simon.myhre@drift.oslo.kommune.no.',
+          'Set JIRA_EMAIL in .env.',
+        ],
+      },
+      {
+        env: 'JIRA_BASE_URL',
+        required: false,
+        steps: [
+          'Your Jira site URL. Defaults to https://oslo-kommune.atlassian.net,',
+          'so you only need to set JIRA_BASE_URL for a different site.',
         ],
       },
     ],
