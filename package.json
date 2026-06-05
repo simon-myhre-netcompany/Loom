@@ -1,0 +1,23 @@
+{
+  "name": "logger",
+  "version": "0.1.0",
+  "description": "Personal work-history aggregator. Read-only CLI connectors that emit a normalized activity-event stream for the `logg` skill to reason over.",
+  "type": "module",
+  "bin": {
+    "logger": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/cli.ts",
+    "logger": "tsx src/cli.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}
