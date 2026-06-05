@@ -137,11 +137,12 @@ behind explicit write credentials.
 
 Agreed to do later, captured so we don't lose them:
 
-- **Microsoft Teams** — both the **Netcompany** and **Oslo kommune** tenants.
-  Read-only chat/messages via Microsoft Graph (Azure app registration + admin
-  consent; possibly metered). High friction — parked. Note: there is **no
-  Netcompany Slack**, only Teams; Oslo kommune has both. Calendar already covers
-  the meeting side of Teams.
+- **Microsoft Teams** — **blocked in both tenants by admin policy** (tried
+  2026-06-05): can't register an Entra app (401), and Microsoft's pre-registered
+  Graph CLI client is locked to assigned users + Conditional Access
+  (AADSTS50105 / 53003). Needs IT to assign app access or register an app with
+  delegated `Chat.Read` + admin consent. Calendar already covers the *meeting*
+  side; chat would be the only addition. Note: no Netcompany Slack, only Teams.
 - **Second Slack workspace** — only if a non-Oslo Slack ever appears (today the
   Oslo kommune workspace is the only Slack).
 - **Azure DevOps / local git** — easy PAT/zero-auth wins if code/work items live
