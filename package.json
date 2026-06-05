@@ -7,7 +7,8 @@
     "logger": "dist/cli.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && bash scripts/build-helper.sh",
+    "build:helper": "bash scripts/build-helper.sh",
     "dev": "tsx src/cli.ts",
     "logger": "tsx src/cli.ts",
     "typecheck": "tsc --noEmit"

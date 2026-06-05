@@ -5,6 +5,7 @@
 import type { ActivityEvent } from './types.js';
 import * as tempo from './connectors/tempo/index.js';
 import * as github from './connectors/github/index.js';
+import * as calendar from './connectors/calendar/index.js';
 
 /** A flag an action accepts, with metadata for prompting in interactive mode. */
 export interface PromptSpec {
@@ -141,6 +142,46 @@ export const CONNECTORS: ConnectorSpec[] = [
           'Set GITHUB_TOKEN_OSLO in .env and register its expiry as above.',
           'Logger reads every GITHUB_TOKEN / GITHUB_TOKEN_* var and merges them,',
           'so add as many orgs as you like with more GITHUB_TOKEN_<NAME> vars.',
+        ],
+      },
+    ],
+  },
+  {
+    source: 'calendar',
+    description: 'Apple Calendar events (local, via EventKit — no API keys)',
+    run: calendar.run,
+    actions: [
+      {
+        name: 'events',
+        description: 'Meetings & events in the range from all your calendars',
+        prompts: [
+          { key: 'since', label: 'Look back how far? (e.g. 7d, 2w, YYYY-MM-DD)', default: '7d' },
+          { key: 'until', label: 'Up until? (YYYY-MM-DD, blank = today)', prompt: false },
+        ],
+      },
+    ],
+    setup: [
+      {
+        env: '(no API key — all local)',
+        required: true,
+        steps: [
+          'Apple Calendar is read locally via EventKit. No tokens, no cloud auth.',
+          '',
+          '1. Get your calendars INTO Apple Calendar (Calendar.app):',
+          '   System Settings → Internet Accounts → Add Account.',
+          '   - Netcompany mail/calendar: add it (Microsoft Exchange / 365).',
+          '   - Oslo kommune mail/calendar: add it (Microsoft Exchange / 365).',
+          '   Enable "Calendars" for each account. They now sync into Calendar.app.',
+          '',
+          '2. Build the helper (needs Xcode command line tools / swiftc):',
+          '   npm run build      # compiles bin/calendar-helper',
+          '',
+          '3. Grant Calendar permission (one time):',
+          '   Run `logger calendar events` once. macOS prompts for Calendar',
+          '   access — allow it. If no prompt appears, go to System Settings →',
+          '   Privacy & Security → Calendars and enable your terminal app.',
+          '',
+          'That is it — then `logger calendar events --since 14d` works.',
         ],
       },
     ],
