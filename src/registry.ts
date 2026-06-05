@@ -7,6 +7,7 @@ import * as tempo from './connectors/tempo/index.js';
 import * as github from './connectors/github/index.js';
 import * as calendar from './connectors/calendar/index.js';
 import * as jira from './connectors/jira/index.js';
+import * as confluence from './connectors/confluence/index.js';
 
 /** A flag an action accepts, with metadata for prompting in interactive mode. */
 export interface PromptSpec {
@@ -203,25 +204,26 @@ export const CONNECTORS: ConnectorSpec[] = [
     ],
     setup: [
       {
-        env: 'JIRA_API_TOKEN',
+        env: 'ATLASSIAN_API_TOKEN',
         required: true,
         steps: [
-          'Atlassian API token (used as Basic auth with your email):',
+          'One Atlassian API token serves BOTH Jira and Confluence (Basic auth',
+          '  with your email).',
           'Go to https://id.atlassian.com/manage-profile/security/api-tokens',
           '  → "Create API token".',
           'Name: LOGGER. Set an expiry (e.g. 365 days).',
-          'Copy the token and set JIRA_API_TOKEN in .env, then register:',
-          '  logger keys add --env JIRA_API_TOKEN --expires <date> \\',
-          '    --label "Atlassian API token (LOGGER)" --source jira',
+          'Copy the token and set ATLASSIAN_API_TOKEN in .env, then register:',
+          '  logger keys add --env ATLASSIAN_API_TOKEN --expires <date> \\',
+          '    --label "Atlassian API token (LOGGER)" --source atlassian',
         ],
       },
       {
-        env: 'JIRA_EMAIL',
+        env: 'ATLASSIAN_EMAIL',
         required: true,
         steps: [
           'The email of your Atlassian account (the Basic-auth username).',
           'For Oslo kommune that is simon.myhre@drift.oslo.kommune.no.',
-          'Set JIRA_EMAIL in .env.',
+          'Set ATLASSIAN_EMAIL in .env.',
         ],
       },
       {
@@ -230,6 +232,34 @@ export const CONNECTORS: ConnectorSpec[] = [
         steps: [
           'Your Jira site URL. Defaults to https://oslo-kommune.atlassian.net,',
           'so you only need to set JIRA_BASE_URL for a different site.',
+        ],
+      },
+    ],
+  },
+  {
+    source: 'confluence',
+    description: 'Confluence pages you edited (weekly status, recent edits)',
+    run: confluence.run,
+    actions: [
+      {
+        name: 'pages',
+        description: 'Pages/blogposts you contributed to, modified in the range',
+        prompts: [
+          { key: 'since', label: 'Look back how far? (e.g. 30d, 2w, YYYY-MM-DD)', default: '30d' },
+          { key: 'cql', label: 'Custom CQL? (blank = your recent pages)', prompt: false },
+        ],
+      },
+    ],
+    setup: [
+      {
+        env: 'ATLASSIAN_API_TOKEN',
+        required: true,
+        steps: [
+          'Confluence uses the SAME Atlassian token as Jira — if you set up Jira,',
+          '  you are already done. See `logger guide jira`.',
+          'Needs ATLASSIAN_EMAIL + ATLASSIAN_API_TOKEN in .env.',
+          'Optional: CONFLUENCE_BASE_URL (defaults to',
+          '  https://oslo-kommune.atlassian.net/wiki).',
         ],
       },
     ],

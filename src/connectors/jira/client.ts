@@ -4,6 +4,7 @@
  * nextPageToken pagination.
  */
 import { fetchJson } from '../../util/http.js';
+import { basicAuthHeader } from '../../util/atlassian.js';
 
 export const DEFAULT_JIRA_BASE = 'https://oslo-kommune.atlassian.net';
 
@@ -31,10 +32,6 @@ export interface SearchParams {
   pageLimit?: number;
 }
 
-function authHeader(email: string, token: string): string {
-  return 'Basic ' + Buffer.from(`${email}:${token}`).toString('base64');
-}
-
 interface SearchResponse {
   issues?: JiraIssue[];
   nextPageToken?: string;
@@ -43,7 +40,7 @@ interface SearchResponse {
 export async function searchIssues(params: SearchParams): Promise<JiraIssue[]> {
   const { base, email, token, jql, fields, pageLimit = 10 } = params;
   const url = `${base}/rest/api/3/search/jql`;
-  const headers = { Authorization: authHeader(email, token) };
+  const headers = { Authorization: basicAuthHeader(email, token) };
 
   const all: JiraIssue[] = [];
   let nextPageToken: string | undefined;

@@ -40,8 +40,12 @@ Every event has the same shape, so you can merge sources freely:
   them to stitch a ticket's code + status into one story. `#TIL_KUNDE` in
   comments marks customer-facing updates.
 
-(More land over time: confluence, slack. Check `logger --help` for what's
-currently wired up before assuming a source exists.)
+- **confluence** — `confluence pages` → pages you've edited, incl. your weekly
+  status page ("Status Team Arkiv"). Read the previous status page for tone and
+  structure, then fill it with this week's activity from the other sources.
+
+(More land over time: slack. Check `logger --help` for what's currently wired
+up before assuming a source exists.)
 
 ## What to produce
 
