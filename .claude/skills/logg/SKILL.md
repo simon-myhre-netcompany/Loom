@@ -44,8 +44,12 @@ Every event has the same shape, so you can merge sources freely:
   status page ("Status Team Arkiv"). Read the previous status page for tone and
   structure, then fill it with this week's activity from the other sources.
 
-(More land over time: slack. Check `logger --help` for what's currently wired
-up before assuming a source exists.)
+- **slack** — `slack messages` → messages you sent (DMs + channels), across
+  workspaces. Good for "informed/coordinated with X" lines; note most are short
+  DMs, so summarize themes rather than quoting every message.
+
+(Check `logger --help` for what's currently wired up before assuming a source
+exists.)
 
 ## What to produce
 

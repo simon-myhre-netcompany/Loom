@@ -8,6 +8,7 @@ import * as github from './connectors/github/index.js';
 import * as calendar from './connectors/calendar/index.js';
 import * as jira from './connectors/jira/index.js';
 import * as confluence from './connectors/confluence/index.js';
+import * as slack from './connectors/slack/index.js';
 
 /** A flag an action accepts, with metadata for prompting in interactive mode. */
 export interface PromptSpec {
@@ -260,6 +261,48 @@ export const CONNECTORS: ConnectorSpec[] = [
           'Needs ATLASSIAN_EMAIL + ATLASSIAN_API_TOKEN in .env.',
           'Optional: CONFLUENCE_BASE_URL (defaults to',
           '  https://oslo-kommune.atlassian.net/wiki).',
+        ],
+      },
+    ],
+  },
+  {
+    source: 'slack',
+    description: 'Slack messages you sent (across workspaces)',
+    run: slack.run,
+    actions: [
+      {
+        name: 'messages',
+        description: 'Messages you sent in the range (search.messages from:me)',
+        prompts: [
+          { key: 'since', label: 'Look back how far? (e.g. 7d, 2w, YYYY-MM-DD)', default: '7d' },
+          { key: 'until', label: 'Up until? (YYYY-MM-DD, blank = today)', prompt: false },
+        ],
+      },
+    ],
+    setup: [
+      {
+        env: 'SLACK_TOKEN_<WORKSPACE>',
+        required: true,
+        steps: [
+          'A Slack USER token (xoxp-) per workspace. One app per workspace:',
+          '',
+          '1. Go to https://api.slack.com/apps → "Create New App" → "From scratch".',
+          '   Name it LOGGER and pick the workspace.',
+          '   (NOT "generate token" — that is for app-config, not what we want.)',
+          '2. Left sidebar → "OAuth & Permissions".',
+          '3. Under "User Token Scopes" (NOT Bot), add:',
+          '     search:read   (find your messages)',
+          '     users:read    (resolve your identity)',
+          '4. Top of the page → "Install to Workspace".',
+          '   - "Allow" screen  → you can self-serve. Click Allow.',
+          '   - "Request to Install" → needs an admin; ask IT or try another',
+          '     workspace where you can self-serve.',
+          '5. Copy the "User OAuth Token" (starts with xoxp-).',
+          '6. Set it in .env as SLACK_TOKEN_OSLO (or _NETCOMPANY, etc.) — Logger',
+          '   reads every SLACK_TOKEN / SLACK_TOKEN_* var and merges workspaces.',
+          '',
+          'Note: search.messages must be enabled for the workspace (it is on most',
+          'paid plans). The connector will error with a clear message if not.',
         ],
       },
     ],

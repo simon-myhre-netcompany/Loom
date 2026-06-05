@@ -14,7 +14,8 @@ See [`GOAL.md`](./GOAL.md) for the full motivation, design, and roadmap.
 - ✅ **Apple Calendar** events, local via EventKit (read-only)
 - ✅ **Jira** issues you work on (read-only)
 - ✅ **Confluence** pages you edited — incl. your weekly status (read-only)
-- ⬜ Slack — planned (see GOAL.md roadmap)
+- ✅ **Slack** messages you sent, across workspaces (read-only)
+- ⬜ Teams (Graph, high friction), Azure DevOps, local git — possible future (see GOAL.md)
 
 Everything is **read-only**. Writing (filling Tempo, posting comments, etc.) is
 a deliberate later phase.
