@@ -32,9 +32,12 @@ Every event has the same shape, so you can merge sources freely:
 - **tempo** — `tempo worklogs` → your logged hours (source of truth for time).
 - **github** — `github prs` and `github commits` → PRs and commits you authored,
   merged across your personal account and the oslo-kommune org.
+- **calendar** — `calendar events` → Apple Calendar meetings & events (local,
+  EventKit). Note the `Birthdays` / `Siri Suggestions` / holiday calendars are
+  noise — focus on real meetings when drafting status.
 
-(More land over time: jira, confluence, calendar. Check `logger --help` for
-what's currently wired up before assuming a source exists.)
+(More land over time: jira, confluence. Check `logger --help` for what's
+currently wired up before assuming a source exists.)
 
 ## What to produce
 
