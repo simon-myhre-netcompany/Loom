@@ -15,7 +15,8 @@ See [`GOAL.md`](./GOAL.md) for the full motivation, design, and roadmap.
 - ✅ **Jira** issues you work on (read-only)
 - ✅ **Confluence** pages you edited — incl. your weekly status (read-only)
 - ✅ **Slack** messages you sent, across workspaces (read-only)
-- ⬜ Teams (Graph, high friction), Azure DevOps, local git — possible future (see GOAL.md)
+- ✅ **Apple Mail** sent messages, local via Mail.app (read-only)
+- ⬜ Teams (Graph, high friction), `jira comments`, Azure DevOps, local git — backlog (see GOAL.md)
 
 Everything is **read-only**. Writing (filling Tempo, posting comments, etc.) is
 a deliberate later phase.

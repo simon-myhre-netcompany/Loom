@@ -30,6 +30,7 @@ export type Source =
   | 'git'
   | 'github'
   | 'calendar'
+  | 'mail'
   | 'confluence'
   | 'slack'
   | 'teams'

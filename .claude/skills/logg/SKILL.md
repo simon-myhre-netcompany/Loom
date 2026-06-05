@@ -48,6 +48,10 @@ Every event has the same shape, so you can merge sources freely:
   workspaces. Good for "informed/coordinated with X" lines; note most are short
   DMs, so summarize themes rather than quoting every message.
 
+- **mail** — `mail sent` → emails you sent (Apple Mail, both Netcompany + Oslo
+  kommune accounts). Strong customer-facing signal (e.g. "Purring …" follow-ups);
+  the recipient domain tells you whether it was internal or to the customer.
+
 (Check `logger --help` for what's currently wired up before assuming a source
 exists.)
 

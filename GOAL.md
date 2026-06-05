@@ -133,6 +133,22 @@ Once reads are trustworthy, extend connectors to **apply** changes:
 Each write capability is opt-in, reviewed by me before it fires, and gated
 behind explicit write credentials.
 
+## Backlog (explicitly deferred)
+
+Agreed to do later, captured so we don't lose them:
+
+- **Microsoft Teams** — both the **Netcompany** and **Oslo kommune** tenants.
+  Read-only chat/messages via Microsoft Graph (Azure app registration + admin
+  consent; possibly metered). High friction — parked. Note: there is **no
+  Netcompany Slack**, only Teams; Oslo kommune has both. Calendar already covers
+  the meeting side of Teams.
+- **`jira comments`** — a second Jira action to fetch issue comments, to surface
+  `#TIL_KUNDE` customer-facing updates and drive follow-up reminders.
+- **Second Slack workspace** — only if a non-Oslo Slack ever appears (today the
+  Oslo kommune workspace is the only Slack).
+- **Azure DevOps / local git** — easy PAT/zero-auth wins if code/work items live
+  outside GitHub.
+
 ## Out of scope for v1
 
 - Any **write** to any system.

@@ -9,6 +9,7 @@ import * as calendar from './connectors/calendar/index.js';
 import * as jira from './connectors/jira/index.js';
 import * as confluence from './connectors/confluence/index.js';
 import * as slack from './connectors/slack/index.js';
+import * as mail from './connectors/mail/index.js';
 
 /** A flag an action accepts, with metadata for prompting in interactive mode. */
 export interface PromptSpec {
@@ -303,6 +304,43 @@ export const CONNECTORS: ConnectorSpec[] = [
           '',
           'Note: search.messages must be enabled for the workspace (it is on most',
           'paid plans). The connector will error with a clear message if not.',
+        ],
+      },
+    ],
+  },
+  {
+    source: 'mail',
+    description: 'Apple Mail sent messages (local, via Mail.app — no API keys)',
+    run: mail.run,
+    actions: [
+      {
+        name: 'sent',
+        description: 'Emails you sent in the range (from Mail.app Sent folders)',
+        prompts: [
+          { key: 'since', label: 'Look back how far? (e.g. 7d, 2w, YYYY-MM-DD)', default: '7d' },
+          { key: 'until', label: 'Up until? (YYYY-MM-DD, blank = today)', prompt: false },
+        ],
+      },
+    ],
+    setup: [
+      {
+        env: '(no API key — all local)',
+        required: true,
+        steps: [
+          'Apple Mail is read locally via Mail.app scripting. No tokens.',
+          '',
+          '1. Add your accounts to Apple Mail (Mail.app):',
+          '   System Settings → Internet Accounts → add your Netcompany and',
+          '   Oslo kommune mail (Microsoft Exchange / 365). Enable "Mail".',
+          '',
+          '2. Grant Automation permission (one time):',
+          '   Run `logger mail sent` once. macOS prompts "<terminal> wants to',
+          '   control Mail" — click OK. If no prompt, enable it under System',
+          '   Settings → Privacy & Security → Automation → your terminal → Mail.',
+          '',
+          'Then `logger mail sent --since 14d` lists the emails you sent.',
+          'Note: reads your Sent folders (Sent / Sendte elementer) across',
+          'all accounts and merges them.',
         ],
       },
     ],
