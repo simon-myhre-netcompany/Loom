@@ -25,15 +25,12 @@ async function worklogs(argv: string[]): Promise<ActivityEvent[]> {
   const token = flagOrEnv(flags, 'token', 'TEMPO_API_TOKEN');
   if (!token) {
     throw new Error(
-      'No Tempo token. Set TEMPO_API_TOKEN (see .env.example) or pass --token.'
+      'No Tempo token. Set TEMPO_API_TOKEN or pass --token. ' +
+        'Run `logger guide tempo` for how to get one.'
     );
   }
+  // Optional: scope to one user. Without it we get everything the token sees.
   const accountId = flagOrEnv(flags, 'user', 'TEMPO_ACCOUNT_ID');
-  if (!accountId) {
-    throw new Error(
-      'No Tempo accountId. Set TEMPO_ACCOUNT_ID (see .env.example) or pass --user.'
-    );
-  }
 
   const sinceStr = typeof flags.since === 'string' ? flags.since : '7d';
   const from = toDateString(parseSince(sinceStr));
@@ -48,9 +45,10 @@ function toEvent(w: TempoWorklog): ActivityEvent {
   const hours = (w.timeSpentSeconds ?? 0) / 3600;
   const issueId = w.issue?.id;
   const ref = issueId != null ? `tempo-issue-${issueId}` : `worklog-${w.tempoWorklogId ?? 'unknown'}`;
-  const datePart = w.startDate ?? '';
-  const timePart = w.startTime ?? '00:00:00';
-  const timestamp = datePart ? `${datePart}T${timePart}` : new Date(w.createdAt ?? Date.now()).toISOString();
+  // Prefer the proper UTC instant; fall back to date+time, then created.
+  const timestamp =
+    w.startDateTimeUtc ??
+    (w.startDate ? `${w.startDate}T${w.startTime ?? '00:00:00'}` : w.createdAt ?? '');
 
   return {
     timestamp,

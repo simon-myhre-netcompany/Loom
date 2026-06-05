@@ -52,7 +52,25 @@ Every command prints a JSON array of activity events to stdout:
 ```
 
 Flags: `--since 7d|24h|2w|YYYY-MM-DD`, `--until YYYY-MM-DD`, `--ndjson`,
-`--token`, `--user`.
+`--json`, `--table`, `-i`/`--interactive`, `--no-interactive`, `--token`,
+`--user`.
+
+### Dual-mode
+
+- **Agents / pipes:** JSON by default (or `--ndjson`).
+- **Humans at a TTY:** a readable table; run `logger` with no args for an
+  interactive menu.
+
+### Other commands
+
+```bash
+logger guide [source]   # how to obtain each credential (e.g. the Tempo token)
+logger keys             # list registered credentials + expiry
+logger keys check       # exit 1 if any key expires within 30 days
+logger keys add --env JIRA_API_TOKEN --expires 2027-06-05 --label "..." --source jira
+```
+
+Don't remember where a key comes from? `logger guide tempo` prints the steps.
 
 ## Architecture
 

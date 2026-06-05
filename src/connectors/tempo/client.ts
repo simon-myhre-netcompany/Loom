@@ -18,6 +18,7 @@ export interface TempoWorklog {
   billableSeconds?: number;
   startDate?: string; // YYYY-MM-DD
   startTime?: string; // HH:mm:ss
+  startDateTimeUtc?: string; // ISO-8601 with Z
   description?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -26,7 +27,8 @@ export interface TempoWorklog {
 
 export interface GetWorklogsParams {
   token: string;
-  accountId: string;
+  /** When set, scope to this user. Otherwise fetch all worklogs the token sees. */
+  accountId?: string;
   /** Inclusive start date, YYYY-MM-DD. */
   from: string;
   /** Inclusive end date, YYYY-MM-DD. */
@@ -35,6 +37,9 @@ export interface GetWorklogsParams {
 
 export async function getWorklogs(params: GetWorklogsParams): Promise<TempoWorklog[]> {
   const { token, accountId, from, to } = params;
-  const url = `${TEMPO_API_BASE}/worklogs/user/${encodeURIComponent(accountId)}?from=${from}&to=${to}`;
+  const path = accountId
+    ? `/worklogs/user/${encodeURIComponent(accountId)}`
+    : '/worklogs';
+  const url = `${TEMPO_API_BASE}${path}?from=${from}&to=${to}`;
   return fetchPaginated<TempoWorklog>(url, { token });
 }

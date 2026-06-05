@@ -11,10 +11,15 @@ export function parseFlags(argv: string[]): Record<string, string | boolean> {
   const flags: Record<string, string | boolean> = {};
   for (let i = 0; i < argv.length; i++) {
     const token = argv[i];
+    // Short boolean flags: -h, -i
+    if (/^-[a-z]$/i.test(token)) {
+      flags[token.slice(1)] = true;
+      continue;
+    }
     if (!token.startsWith('--')) continue;
     const key = token.slice(2);
     const next = argv[i + 1];
-    if (next === undefined || next.startsWith('--')) {
+    if (next === undefined || next.startsWith('-')) {
       flags[key] = true;
     } else {
       flags[key] = next;
