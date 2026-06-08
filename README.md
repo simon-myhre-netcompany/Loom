@@ -63,24 +63,46 @@ Flags: `--since 7d|24h|2w|YYYY-MM-DD`, `--until YYYY-MM-DD`, `--ndjson`,
 `--json`, `--table`, `-i`/`--interactive`, `--no-interactive`, `--token`,
 `--user`.
 
-### Logging time (the one write path)
+### Logging time — `tempo log` (the one write path)
+
+Everything else is read-only; `tempo log` is the single command that writes.
+It creates a Tempo worklog under **your** account and nobody else's.
 
 ```bash
-# Preview the payload without posting:
+# Preview the payload without posting (always safe):
 node dist/cli.js tempo log --issue TIL-123 --hours 1.5 --dry-run
 
-# Post it (asks to confirm at a TTY; --yes skips the prompt for scripts/agents):
-node dist/cli.js tempo log --issue TIL-123 --hours 1.5 --description "Refined estimate"
+# Post it — asks to confirm at a TTY; --yes skips the prompt (scripts/agents):
+node dist/cli.js tempo log --issue TIL-123 --hours 1.5 --description "Refined estimate" --yes
 ```
 
-- `--issue` takes a Jira key (`TIL-123`, resolved to its numeric id via the
-  Jira connector's Atlassian creds) **or** a raw numeric issue id directly.
-- `--date YYYY-MM-DD` (default today), `--start HH:mm` (default 09:00),
-  `--description` (defaults to the issue summary), `--hours` accepts decimals.
-- **Guardrails:** needs a token with worklog write scope *and* an account id
-  (`TEMPO_ACCOUNT_ID` / `--user`) — without the account id it refuses, so it can
-  never write under someone else. At a TTY it prints the planned worklog and
-  asks before posting; `--dry-run` previews, `--yes` skips the prompt.
+On success it prints the created worklog's id and emits the event:
+
+```text
+✅ Created worklog 203604 on TIL-123.
+```
+
+**Flags**
+
+| Flag | Required | Default | Notes |
+|------|----------|---------|-------|
+| `--issue <KEY\|id>` | yes | — | Jira key (`TIL-123`, resolved to Tempo's numeric id via your Atlassian creds) **or** a raw numeric issue id. |
+| `--hours <n>` | yes | — | Decimals allowed (`0.5`, `1.5`). |
+| `--date YYYY-MM-DD` | no | today | The work date. |
+| `--start HH:mm` | no | `09:00` | Start time. Pass it if the real time matters — otherwise everything lands at 09:00. |
+| `--description "..."` | no | issue summary | Free text; falls back to the issue's summary. |
+| `--dry-run` | no | — | Build and print the payload, post nothing. |
+| `--yes` / `-y` | no | — | Skip the confirmation prompt. |
+
+**Guardrails**
+
+- Needs a token with **worklog write scope** (`logger guide tempo` → grant
+  MANAGE on Worklogs) *and* an account id (`TEMPO_ACCOUNT_ID` / `--user`).
+  Without the account id it **refuses** — so it can never write under someone
+  else, and the worklog's author is always you.
+- At a terminal it prints the planned worklog and asks before posting. With no
+  TTY and no `--yes` it refuses rather than posting blindly. `--dry-run`
+  previews the exact payload first.
 
 ### Dual-mode
 
