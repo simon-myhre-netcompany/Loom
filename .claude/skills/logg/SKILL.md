@@ -12,7 +12,7 @@ applies changes manually — this skill never writes to any system.
 
 ## How to fetch
 
-Run the CLI from the project root (`/Users/simonm/workdir/netcompany/Logger`).
+Run the CLI from the project root (`/Users/simonm/workdir/netcompany/Loom`).
 Each command prints a JSON array of normalized activity events:
 
 ```bash
