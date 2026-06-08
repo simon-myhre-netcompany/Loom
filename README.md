@@ -9,7 +9,7 @@ See [`GOAL.md`](./GOAL.md) for the full motivation, design, and roadmap.
 
 ## Status
 
-- ✅ **Tempo** worklogs (read-only)
+- ✅ **Tempo** worklogs — read your logged hours, **and log time** (write)
 - ✅ **GitHub** PRs & commits you authored, across accounts/orgs (read-only)
 - ✅ **Apple Calendar** events, local via EventKit (read-only)
 - ✅ **Jira** issues you work on + your comments incl. `#TIL_KUNDE` (read-only)
@@ -18,8 +18,10 @@ See [`GOAL.md`](./GOAL.md) for the full motivation, design, and roadmap.
 - ✅ **Apple Mail** sent messages, local via Mail.app (read-only)
 - ⬜ Teams (Graph, high friction), Azure DevOps, local git — backlog (see GOAL.md)
 
-Everything is **read-only**. Writing (filling Tempo, posting comments, etc.) is
-a deliberate later phase.
+Everything is **read-only** except one deliberate write path: `logger tempo log`
+creates Tempo worklogs. It only ever writes under your own account (it refuses
+to run without `TEMPO_ACCOUNT_ID`) and confirms before posting. Other writes
+(posting comments, etc.) remain a later phase.
 
 ## Setup
 
@@ -60,6 +62,25 @@ Every command prints a JSON array of activity events to stdout:
 Flags: `--since 7d|24h|2w|YYYY-MM-DD`, `--until YYYY-MM-DD`, `--ndjson`,
 `--json`, `--table`, `-i`/`--interactive`, `--no-interactive`, `--token`,
 `--user`.
+
+### Logging time (the one write path)
+
+```bash
+# Preview the payload without posting:
+node dist/cli.js tempo log --issue TIL-123 --hours 1.5 --dry-run
+
+# Post it (asks to confirm at a TTY; --yes skips the prompt for scripts/agents):
+node dist/cli.js tempo log --issue TIL-123 --hours 1.5 --description "Refined estimate"
+```
+
+- `--issue` takes a Jira key (`TIL-123`, resolved to its numeric id via the
+  Jira connector's Atlassian creds) **or** a raw numeric issue id directly.
+- `--date YYYY-MM-DD` (default today), `--start HH:mm` (default 09:00),
+  `--description` (defaults to the issue summary), `--hours` accepts decimals.
+- **Guardrails:** needs a token with worklog write scope *and* an account id
+  (`TEMPO_ACCOUNT_ID` / `--user`) — without the account id it refuses, so it can
+  never write under someone else. At a TTY it prints the planned worklog and
+  asks before posting; `--dry-run` previews, `--yes` skips the prompt.
 
 ### Dual-mode
 

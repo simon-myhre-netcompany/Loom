@@ -46,7 +46,7 @@ export interface ConnectorSpec {
 export const CONNECTORS: ConnectorSpec[] = [
   {
     source: 'tempo',
-    description: 'Tempo worklogs — your logged hours',
+    description: 'Tempo worklogs — your logged hours (read), and log time (write)',
     run: tempo.run,
     actions: [
       {
@@ -55,6 +55,16 @@ export const CONNECTORS: ConnectorSpec[] = [
         prompts: [
           { key: 'since', label: 'Look back how far? (e.g. 7d, 2w, YYYY-MM-DD)', default: '7d' },
           { key: 'until', label: 'Up until? (YYYY-MM-DD, blank = today)', prompt: false },
+        ],
+      },
+      {
+        name: 'log',
+        description: 'Create a worklog (write — needs an account id; confirms first)',
+        prompts: [
+          { key: 'issue', label: 'Issue key or numeric id (e.g. TIL-123)' },
+          { key: 'hours', label: 'Hours spent (e.g. 1.5)' },
+          { key: 'date', label: 'Work date (YYYY-MM-DD, blank = today)', prompt: false },
+          { key: 'description', label: 'Description (blank = issue summary)', prompt: false },
         ],
       },
     ],
@@ -69,6 +79,9 @@ export const CONNECTORS: ConnectorSpec[] = [
           'Choose "Custom" access and grant VIEW on all scopes:',
           '  Accounts, Activities, Approvals, Audit, Periods, Plans,',
           '  Projects, Schemes, Teams, Worklogs.',
+          'For `logger tempo log` (writing time), ALSO grant MANAGE on Worklogs',
+          '  — that is the only write scope Logger uses. Leave everything else',
+          '  VIEW-only so the token can never write beyond worklogs.',
           'Confirm, copy the token, and set TEMPO_API_TOKEN in .env.',
           'Register its expiry so `logger keys check` can warn you:',
           '  logger keys add --env TEMPO_API_TOKEN --expires <365-days-out> \\',
@@ -85,6 +98,8 @@ export const CONNECTORS: ConnectorSpec[] = [
           '  TEMPO_ACCOUNT_ID in .env.',
           'Without it, Logger fetches every worklog the token can see',
           '(the whole org) instead of just yours — so set it.',
+          'It is also REQUIRED for `logger tempo log`: writing refuses to run',
+          'without it, so a worklog can only ever be created under your account.',
         ],
       },
     ],

@@ -52,6 +52,31 @@ export async function getMyAccountId(base: string, email: string, token: string)
   return me.accountId;
 }
 
+/** An issue's stable numeric id + summary, looked up from its key. */
+export interface IssueRef {
+  id: number;
+  key: string;
+  summary?: string;
+}
+
+/**
+ * Resolve a human issue key (e.g. "TIL-123") to its numeric id — the id Tempo's
+ * write API requires. `summary` comes along for free so callers can use it.
+ */
+export async function getIssueRef(
+  base: string,
+  email: string,
+  token: string,
+  key: string
+): Promise<IssueRef> {
+  const headers = { Authorization: basicAuthHeader(email, token) };
+  const issue = await fetchJson<{ id: string; key: string; fields?: { summary?: string } }>(
+    `${base}/rest/api/3/issue/${encodeURIComponent(key)}?fields=summary`,
+    { headers }
+  );
+  return { id: Number(issue.id), key: issue.key, summary: issue.fields?.summary };
+}
+
 /**
  * All comments on an issue, via the v2 endpoint (plain-string bodies — no ADF).
  * Paginated by startAt/total.

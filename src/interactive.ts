@@ -8,7 +8,7 @@
  * lines arrive at once) — the latter breaks naive question()-per-prompt code.
  */
 import { createInterface, type Interface } from 'node:readline';
-import { stdin, stdout } from 'node:process';
+import { stdin, stdout, stderr } from 'node:process';
 
 let rl: Interface | undefined;
 const lineQueue: string[] = [];
@@ -60,6 +60,17 @@ export async function ask(question: string, def?: string): Promise<string> {
   const line = await nextLine();
   const answer = (line ?? '').trim();
   return answer || def || '';
+}
+
+/**
+ * Yes/no confirmation for a write/destructive action. Prompt goes to STDERR so
+ * it never mixes into the JSON/table the command prints on stdout. Defaults to
+ * "no" on a bare Enter or end-of-input — the safe choice for a write.
+ */
+export async function confirm(question: string): Promise<boolean> {
+  stderr.write(`${question} [y/N]: `);
+  const line = await nextLine();
+  return /^y(es)?$/i.test((line ?? '').trim());
 }
 
 /** Numbered single-choice menu. Returns the chosen item. */

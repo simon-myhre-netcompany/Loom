@@ -32,9 +32,12 @@ npm run logger -- tempo worklogs --since 7d
 
 ## Tools available in this project
 
-- **`logger <source> <action> [flags]`** — fetch activity events. Today:
+- **`logger <source> <action> [flags]`** — fetch activity events. e.g.
   `tempo worklogs`. Flags: `--since 7d|2w|YYYY-MM-DD`, `--until`, `--token`,
   `--user`.
+- **`logger tempo log`** — the one write action: create a Tempo worklog.
+  `--issue <KEY|id>`, `--hours <n>`, `--date`, `--start`, `--description`,
+  `--dry-run`, `--yes`. Refuses without an account id; confirms before posting.
 - **`logger guide [source]`** — step-by-step on how to obtain each credential.
 - **`logger keys [list|add|check]`** — credential expiry tracking. `check` exits
   non-zero when a key expires within 30 days. `add --env X --expires YYYY-MM-DD`.
@@ -50,8 +53,11 @@ npm run logger -- tempo worklogs --since 7d
 
 ## Conventions
 
-- **Read-only.** v1 connectors must have no write code paths and no write
-  credentials. Writing is a deliberate later phase (see GOAL.md).
+- **Read-only by default.** The sole exception is `logger tempo log` (create a
+  worklog). Any new write path must be just as guarded: a dedicated action, an
+  explicit account/owner check so we never write on someone else's behalf, and a
+  confirm/`--dry-run`/`--yes` flow. Everything else stays read-only with no write
+  credentials. Broader writing is still a deliberate later phase (see GOAL.md).
 - **Every connector emits `ActivityEvent`** (`src/types.ts`) — keep the shape
   stable; add fields rather than renaming.
 - **Register new connectors in `src/registry.ts`** (description, actions,
