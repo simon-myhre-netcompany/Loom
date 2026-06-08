@@ -2,7 +2,7 @@
  * Calendar connector — reads Apple Calendar via a local EventKit helper binary.
  * Read-only, no network, no tokens. Just the macOS Calendar privacy permission.
  *
- *   logger calendar events [--since 7d] [--until YYYY-MM-DD]
+ *   loom calendar events [--since 7d] [--until YYYY-MM-DD]
  */
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -46,7 +46,7 @@ async function events(argv: string[]): Promise<ActivityEvent[]> {
   if (!existsSync(HELPER)) {
     throw new Error(
       `Calendar helper not built. Run \`npm run build\` on macOS (needs swiftc). ` +
-        `Run \`logger guide calendar\` for setup.`
+        `Run \`loom guide calendar\` for setup.`
     );
   }
 
@@ -67,7 +67,7 @@ async function events(argv: string[]): Promise<ActivityEvent[]> {
       throw new Error(
         'Calendar access not granted. Open System Settings → Privacy & Security → ' +
           'Calendars and enable access for your terminal app, then retry. ' +
-          'See `logger guide calendar`.'
+          'See `loom guide calendar`.'
       );
     }
     throw new Error(`calendar helper failed: ${e.stderr?.trim() || (err as Error).message}`);
@@ -98,6 +98,6 @@ function toEvent(e: RawEvent): ActivityEvent {
 
 function usage(reason: string): Error {
   return new Error(
-    `calendar: ${reason}\nusage: logger calendar events [--since 7d] [--until YYYY-MM-DD]`
+    `calendar: ${reason}\nusage: loom calendar events [--since 7d] [--until YYYY-MM-DD]`
   );
 }

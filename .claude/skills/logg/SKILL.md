@@ -1,12 +1,12 @@
 ---
 name: logg
-description: Gather Simon's recent work history from connected sources (Tempo today; git, Jira, Confluence, calendar later) via the read-only `logger` CLI, then help draft weekly status, decide what Tempo hours to fill, and flag follow-ups (customer replies, estimate/deadline updates). Use when Simon says "logg", asks for a weekly status draft, wants to know what to fill in Tempo, or asks what he worked on / needs to follow up on.
+description: Gather Simon's recent work history from connected sources (Tempo today; git, Jira, Confluence, calendar later) via the read-only `loom` CLI, then help draft weekly status, decide what Tempo hours to fill, and flag follow-ups (customer replies, estimate/deadline updates). Use when Simon says "logg", asks for a weekly status draft, wants to know what to fill in Tempo, or asks what he worked on / needs to follow up on.
 ---
 
 # logg
 
 Help Simon turn scattered work history into drafts and reminders. The heavy
-lifting of *fetching* is done by the read-only `logger` CLI; your job is to call
+lifting of *fetching* is done by the read-only `loom` CLI; your job is to call
 it, merge the results into one timeline, and reason over it **with** him. Simon
 applies changes manually — this skill never writes to any system.
 
@@ -16,7 +16,7 @@ Run the CLI from the project root (`/Users/simonm/workdir/netcompany/Logger`).
 Each command prints a JSON array of normalized activity events:
 
 ```bash
-npm run logger -- tempo worklogs --since 7d
+npm run loom -- tempo worklogs --since 7d
 ```
 
 Common flags: `--since 7d|24h|2w|YYYY-MM-DD`, `--until YYYY-MM-DD`, `--ndjson`.
@@ -54,7 +54,7 @@ Every event has the same shape, so you can merge sources freely:
   kommune accounts). Strong customer-facing signal (e.g. "Purring …" follow-ups);
   the recipient domain tells you whether it was internal or to the customer.
 
-(Check `logger --help` for what's currently wired up before assuming a source
+(Check `loom --help` for what's currently wired up before assuming a source
 exists.)
 
 ## What to produce

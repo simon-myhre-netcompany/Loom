@@ -1,8 +1,8 @@
 /**
  * GitHub connector — command handlers. Read-only.
  *
- *   logger github prs     [--since 7d] [--until YYYY-MM-DD]
- *   logger github commits [--since 7d] [--until YYYY-MM-DD]
+ *   loom github prs     [--since 7d] [--until YYYY-MM-DD]
+ *   loom github commits [--since 7d] [--until YYYY-MM-DD]
  *
  * Reads every GITHUB_TOKEN / GITHUB_TOKEN_* env var (one per resource owner,
  * e.g. personal + oslo-kommune), queries each, and merges/dedupes the results.
@@ -46,7 +46,7 @@ async function collect(
   if (tokens.length === 0) {
     throw new Error(
       'No GitHub token. Set GITHUB_TOKEN (and/or GITHUB_TOKEN_<NAME> for more ' +
-        'accounts/orgs) or pass --token. Run `logger guide github` for how to get one.'
+        'accounts/orgs) or pass --token. Run `loom guide github` for how to get one.'
     );
   }
 
@@ -134,6 +134,6 @@ function dedupeByRefAndUrl(events: ActivityEvent[]): ActivityEvent[] {
 function usage(reason: string): Error {
   return new Error(
     `github: ${reason}\n` +
-      'usage: logger github <prs|commits> [--since 7d] [--until YYYY-MM-DD]'
+      'usage: loom github <prs|commits> [--since 7d] [--until YYYY-MM-DD]'
   );
 }

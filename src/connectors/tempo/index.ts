@@ -1,8 +1,8 @@
 /**
  * Tempo connector — command handlers.
  *
- *   logger tempo worklogs [--since 7d] [--until YYYY-MM-DD] [--user <accountId>]
- *   logger tempo log --issue TIL-123 --hours 1.5 [--date YYYY-MM-DD]
+ *   loom tempo worklogs [--since 7d] [--until YYYY-MM-DD] [--user <accountId>]
+ *   loom tempo log --issue TIL-123 --hours 1.5 [--date YYYY-MM-DD]
  *                    [--start HH:mm] [--description "..."] [--dry-run] [--yes]
  *
  * `log` is the one write path. It refuses to run without an account id (env
@@ -37,7 +37,7 @@ async function worklogs(argv: string[]): Promise<ActivityEvent[]> {
   if (!token) {
     throw new Error(
       'No Tempo token. Set TEMPO_API_TOKEN or pass --token. ' +
-        'Run `logger guide tempo` for how to get one.'
+        'Run `loom guide tempo` for how to get one.'
     );
   }
   // Optional: scope to one user. Without it we get everything the token sees.
@@ -66,7 +66,7 @@ async function log(argv: string[]): Promise<ActivityEvent[]> {
   if (!token) {
     throw new Error(
       'No Tempo token. Set TEMPO_API_TOKEN or pass --token. ' +
-        'Run `logger guide tempo` for how to get one (with worklog write scope).'
+        'Run `loom guide tempo` for how to get one (with worklog write scope).'
     );
   }
 
@@ -76,7 +76,7 @@ async function log(argv: string[]): Promise<ActivityEvent[]> {
     throw new Error(
       'Refusing to create a worklog without an account id — otherwise we might ' +
         'write under the wrong person. Set TEMPO_ACCOUNT_ID in .env (or pass ' +
-        '--user <accountId>). Run `logger guide tempo` for how to find it.'
+        '--user <accountId>). Run `loom guide tempo` for how to find it.'
     );
   }
 
@@ -164,7 +164,7 @@ async function resolveIssue(
   if (!auth) {
     throw new Error(
       `Need Atlassian credentials to resolve issue key "${issueArg}" to its numeric id. ` +
-        'Set ATLASSIAN_EMAIL + ATLASSIAN_API_TOKEN (see `logger guide jira`), ' +
+        'Set ATLASSIAN_EMAIL + ATLASSIAN_API_TOKEN (see `loom guide jira`), ' +
         'or pass the numeric id directly as --issue <number>.'
     );
   }
@@ -231,8 +231,8 @@ function usage(reason: string): Error {
   return new Error(
     `tempo: ${reason}\n` +
       'usage:\n' +
-      '  logger tempo worklogs [--since 7d] [--until YYYY-MM-DD] [--user <accountId>]\n' +
-      '  logger tempo log --issue <KEY|id> --hours <n> [--date YYYY-MM-DD]\n' +
+      '  loom tempo worklogs [--since 7d] [--until YYYY-MM-DD] [--user <accountId>]\n' +
+      '  loom tempo log --issue <KEY|id> --hours <n> [--date YYYY-MM-DD]\n' +
       '                   [--start HH:mm] [--description "..."] [--dry-run] [--yes]'
   );
 }

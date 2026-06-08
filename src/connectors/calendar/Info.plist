@@ -3,8 +3,8 @@
 <plist version="1.0">
 <dict>
   <key>NSCalendarsUsageDescription</key>
-  <string>Logger reads your calendar events to summarize what you worked on.</string>
+  <string>Loom reads your calendar events to summarize what you worked on.</string>
   <key>NSCalendarsFullAccessUsageDescription</key>
-  <string>Logger reads your calendar events to summarize what you worked on.</string>
+  <string>Loom reads your calendar events to summarize what you worked on.</string>
 </dict>
 </plist>

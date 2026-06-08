@@ -1,4 +1,4 @@
-# Logger
+# Loom
 
 Personal work-history aggregator. Read-only CLI connectors that each pull from
 one source and emit a **normalized activity-event** stream, so the `logg` skill
@@ -18,7 +18,7 @@ See [`GOAL.md`](./GOAL.md) for the full motivation, design, and roadmap.
 - ✅ **Apple Mail** sent messages, local via Mail.app (read-only)
 - ⬜ Teams (Graph, high friction), Azure DevOps, local git — backlog (see GOAL.md)
 
-Everything is **read-only** except one deliberate write path: `logger tempo log`
+Everything is **read-only** except one deliberate write path: `loom tempo log`
 creates Tempo worklogs. It only ever writes under your own account (it refuses
 to run without `TEMPO_ACCOUNT_ID`) and confirms before posting. Other writes
 (posting comments, etc.) remain a later phase.
@@ -37,7 +37,7 @@ Keychain later.
 
 ```bash
 # via npm (dev, runs TypeScript directly)
-npm run logger -- tempo worklogs --since 7d
+npm run loom -- tempo worklogs --since 7d
 
 # or build once and run the binary
 npm run build
@@ -96,7 +96,7 @@ On success it prints the created worklog's id and emits the event:
 
 **Guardrails**
 
-- Needs a token with **worklog write scope** (`logger guide tempo` → grant
+- Needs a token with **worklog write scope** (`loom guide tempo` → grant
   MANAGE on Worklogs) *and* an account id (`TEMPO_ACCOUNT_ID` / `--user`).
   Without the account id it **refuses** — so it can never write under someone
   else, and the worklog's author is always you.
@@ -107,19 +107,19 @@ On success it prints the created worklog's id and emits the event:
 ### Dual-mode
 
 - **Agents / pipes:** JSON by default (or `--ndjson`).
-- **Humans at a TTY:** a readable table; run `logger` with no args for an
+- **Humans at a TTY:** a readable table; run `loom` with no args for an
   interactive menu.
 
 ### Other commands
 
 ```bash
-logger guide [source]   # how to obtain each credential (e.g. the Tempo token)
-logger keys             # list registered credentials + expiry
-logger keys check       # exit 1 if any key expires within 30 days
-logger keys add --env JIRA_API_TOKEN --expires 2027-06-05 --label "..." --source jira
+loom guide [source]   # how to obtain each credential (e.g. the Tempo token)
+loom keys             # list registered credentials + expiry
+loom keys check       # exit 1 if any key expires within 30 days
+loom keys add --env JIRA_API_TOKEN --expires 2027-06-05 --label "..." --source jira
 ```
 
-Don't remember where a key comes from? `logger guide tempo` prints the steps.
+Don't remember where a key comes from? `loom guide tempo` prints the steps.
 
 ## Architecture
 

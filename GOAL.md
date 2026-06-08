@@ -1,7 +1,7 @@
-# Logger — Goal & Motivation
+# Loom — Goal & Motivation
 
 > Status: design / pre-implementation. This document captures *why* we're
-> building Logger and *what* success looks like. It is the north star, not a
+> building Loom and *what* success looks like. It is the north star, not a
 > spec.
 
 ## The problem (motivation)
@@ -26,7 +26,7 @@ actually do is scattered across many systems, in many formats:
 
 All of this is *evidence of work I already did*. The information exists — it's
 just trapped in silos and re-entered by hand in different shapes. That is the
-waste Logger removes.
+waste Loom removes.
 
 ## The vision
 
@@ -48,7 +48,7 @@ A deliberate split that mirrors how Claude Code works:
 
 1. **Connectors = small, boring CLI tools** — one per source. Each only
    **reads** and prints structured JSON. Trivial to test in isolation
-   (`logger tempo worklogs --since 7d`).
+   (`loom tempo worklogs --since 7d`).
 2. **A `logg` skill** — knows which connectors to call, fetches recent history,
    merges it into one timeline, and reasons over it *with me* in conversation.
 
@@ -91,8 +91,8 @@ merged stream.
 
 ## Tech stack
 
-- **TypeScript / Node.js** for the connectors, exposed as a single `logger`
-  binary with subcommands (`logger <source> <action> [flags]`), JSON to stdout.
+- **TypeScript / Node.js** for the connectors, exposed as a single `loom`
+  binary with subcommands (`loom <source> <action> [flags]`), JSON to stdout.
 - Rationale: the existing **JTI** extension is vanilla JS, so its Tempo / Jira /
   timereg client logic ports almost directly; one language end-to-end;
   JSON-native; easy to shell out to a small helper for Apple Calendar

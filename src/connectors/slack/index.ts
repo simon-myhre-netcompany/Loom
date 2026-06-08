@@ -1,7 +1,7 @@
 /**
  * Slack connector — command handlers. Read-only.
  *
- *   logger slack messages [--since 7d] [--until YYYY-MM-DD]
+ *   loom slack messages [--since 7d] [--until YYYY-MM-DD]
  *
  * Finds messages YOU sent (search.messages `from:me`) across every workspace
  * token configured as SLACK_TOKEN / SLACK_TOKEN_* — merged and deduped.
@@ -32,7 +32,7 @@ async function messages(argv: string[]): Promise<ActivityEvent[]> {
   if (tokens.length === 0) {
     throw new Error(
       'No Slack token. Set SLACK_TOKEN (and/or SLACK_TOKEN_<NAME> for more ' +
-        'workspaces) or pass --token. Run `logger guide slack` for how to get one.'
+        'workspaces) or pass --token. Run `loom guide slack` for how to get one.'
     );
   }
 
@@ -95,6 +95,6 @@ function dedupe(events: ActivityEvent[]): ActivityEvent[] {
 
 function usage(reason: string): Error {
   return new Error(
-    `slack: ${reason}\nusage: logger slack messages [--since 7d] [--until YYYY-MM-DD]`
+    `slack: ${reason}\nusage: loom slack messages [--since 7d] [--until YYYY-MM-DD]`
   );
 }

@@ -3,7 +3,7 @@
  * Read-only, local, no tokens. Needs the macOS Automation permission (your
  * terminal app allowed to control Mail.app).
  *
- *   logger mail sent [--since 7d] [--until YYYY-MM-DD]
+ *   loom mail sent [--since 7d] [--until YYYY-MM-DD]
  */
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -66,7 +66,7 @@ async function sent(argv: string[]): Promise<ActivityEvent[]> {
       throw new Error(
         'Mail automation not permitted. Open System Settings → Privacy & Security → ' +
           'Automation and allow your terminal app to control Mail, then retry. ' +
-          'See `logger guide mail`.'
+          'See `loom guide mail`.'
       );
     }
     throw new Error(`mail helper failed: ${msg.trim()}`);
@@ -94,5 +94,5 @@ function toEvent(m: RawMail): ActivityEvent {
 }
 
 function usage(reason: string): Error {
-  return new Error(`mail: ${reason}\nusage: logger mail sent [--since 7d] [--until YYYY-MM-DD]`);
+  return new Error(`mail: ${reason}\nusage: loom mail sent [--since 7d] [--until YYYY-MM-DD]`);
 }

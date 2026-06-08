@@ -1,5 +1,5 @@
 /**
- * The normalized activity event — the core contract of Logger.
+ * The normalized activity event — the core contract of Loom.
  *
  * Every connector, regardless of source, emits an array of these. The `logg`
  * skill merges events from all sources into a single timeline and reasons over

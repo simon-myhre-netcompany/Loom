@@ -13,7 +13,7 @@ function ghHeaders(token: string): Record<string, string> {
     Authorization: `Bearer ${token}`,
     Accept: 'application/vnd.github+json',
     'X-GitHub-Api-Version': '2022-11-28',
-    'User-Agent': 'logger-cli',
+    'User-Agent': 'loom-cli',
   };
 }
 
@@ -29,7 +29,7 @@ async function ghFetch(url: string, token: string): Promise<Response> {
     if (res.status === 401 || res.status === 403) {
       throw new Error(
         `GitHub denied the request (${res.status}). Check the PAT and its scopes ` +
-          `(Metadata + Contents + Pull requests, read-only). Run \`logger guide github\`.` +
+          `(Metadata + Contents + Pull requests, read-only). Run \`loom guide github\`.` +
           (body ? `\n${body.slice(0, 200)}` : '')
       );
     }

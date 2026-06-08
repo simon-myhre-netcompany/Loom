@@ -1,16 +1,16 @@
 {
-  "name": "logger",
+  "name": "loom",
   "version": "0.1.0",
   "description": "Personal work-history aggregator. Read-only CLI connectors that emit a normalized activity-event stream for the `logg` skill to reason over.",
   "type": "module",
   "bin": {
-    "logger": "dist/cli.js"
+    "loom": "dist/cli.js"
   },
   "scripts": {
     "build": "tsc && bash scripts/build-helper.sh",
     "build:helper": "bash scripts/build-helper.sh",
     "dev": "tsx src/cli.ts",
-    "logger": "tsx src/cli.ts",
+    "loom": "tsx src/cli.ts",
     "typecheck": "tsc --noEmit"
   },
   "engines": {

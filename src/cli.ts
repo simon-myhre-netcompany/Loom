@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * logger — read-only work-history aggregator.
+ * loom — read-only work-history aggregator.
  *
- *   logger <source> <action> [flags]      e.g. logger tempo worklogs --since 7d
- *   logger keys [list|add|check]          credential expiry tracking
- *   logger                                interactive menu (at a TTY)
+ *   loom <source> <action> [flags]      e.g. loom tempo worklogs --since 7d
+ *   loom keys [list|add|check]          credential expiry tracking
+ *   loom                                interactive menu (at a TTY)
  *
  * Dual-mode by design:
  *   - Non-interactive (agents / pipes): prints JSON to stdout.
@@ -228,13 +228,13 @@ function printHelp(): void {
 
   stdout.write(
     [
-      'logger — read-only work-history aggregator',
+      'loom — read-only work-history aggregator',
       '',
       'usage:',
-      '  logger <source> <action> [flags]   fetch activity events',
-      '  logger guide [source]              how to obtain the credentials',
-      '  logger keys [list|add|check]       credential expiry tracking',
-      '  logger                             interactive menu (at a TTY)',
+      '  loom <source> <action> [flags]   fetch activity events',
+      '  loom guide [source]              how to obtain the credentials',
+      '  loom keys [list|add|check]       credential expiry tracking',
+      '  loom                             interactive menu (at a TTY)',
       '',
       'sources:',
       sources,
@@ -254,9 +254,9 @@ function printHelp(): void {
       '  -h, --help        show this help',
       '',
       'keys:',
-      '  logger keys                 list registered credentials + expiry',
-      '  logger keys check           exit 1 if any expire soon (<30d) or expired',
-      '  logger keys add --env X --expires YYYY-MM-DD [--label .. --source ..]',
+      '  loom keys                 list registered credentials + expiry',
+      '  loom keys check           exit 1 if any expire soon (<30d) or expired',
+      '  loom keys add --env X --expires YYYY-MM-DD [--label .. --source ..]',
       '',
       'credentials come from environment variables (see .env.example).',
     ].join('\n') + '\n'
@@ -291,7 +291,7 @@ function loadDotEnv(): void {
 }
 
 function fail(message: string): never {
-  process.stderr.write(`logger: ${message}\n`);
+  process.stderr.write(`loom: ${message}\n`);
   process.exit(1);
 }
 

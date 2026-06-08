@@ -1,4 +1,4 @@
-// EventKit helper for the Logger `calendar` connector.
+// EventKit helper for the Loom `calendar` connector.
 //
 // Reads Apple Calendar events in a date range and prints them as a JSON array
 // to stdout. No network, no tokens — just local EventKit, gated by the standard

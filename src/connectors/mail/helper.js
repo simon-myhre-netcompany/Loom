@@ -1,4 +1,4 @@
-// JXA helper for the Logger `mail` connector. Reads SENT messages from Apple
+// JXA helper for the Loom `mail` connector. Reads SENT messages from Apple
 // Mail (Mail.app) in a date range and prints them as JSON to stdout.
 //
 // No network, no tokens — local Mail scripting, gated by the macOS Automation

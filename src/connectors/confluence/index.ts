@@ -1,7 +1,7 @@
 /**
  * Confluence connector — command handlers. Read-only.
  *
- *   logger confluence pages [--since 30d] [--until YYYY-MM-DD] [--cql "..."]
+ *   loom confluence pages [--since 30d] [--until YYYY-MM-DD] [--cql "..."]
  *
  * Default scope: pages/blogposts you've contributed to, modified in the range
  * (your weekly status page, recent edits). Override with --cql.
@@ -30,7 +30,7 @@ async function pages(argv: string[]): Promise<ActivityEvent[]> {
   if (!auth) {
     throw new Error(
       'Missing Atlassian credentials. Set ATLASSIAN_EMAIL and ATLASSIAN_API_TOKEN. ' +
-        'Run `logger guide confluence` for how to get them.'
+        'Run `loom guide confluence` for how to get them.'
     );
   }
   const { email, token } = auth;
@@ -64,6 +64,6 @@ function toEvent(c: ConfluenceContent): ActivityEvent {
 function usage(reason: string): Error {
   return new Error(
     `confluence: ${reason}\n` +
-      'usage: logger confluence pages [--since 30d] [--until YYYY-MM-DD] [--cql "..."]'
+      'usage: loom confluence pages [--since 30d] [--until YYYY-MM-DD] [--cql "..."]'
   );
 }

@@ -1,6 +1,6 @@
-# CLAUDE.md — working in the Logger repo
+# CLAUDE.md — working in the Loom repo
 
-Logger is a **read-only** work-history aggregator: small CLI connectors (one per
+Loom is a **read-only** work-history aggregator: small CLI connectors (one per
 source) emit a normalized `ActivityEvent` stream that the `logg` skill reasons
 over. See `GOAL.md` for the full motivation and roadmap, `README.md` for usage.
 
@@ -27,19 +27,19 @@ node dist/cli.js --help
 Fast iteration without building (runs the TypeScript directly):
 
 ```bash
-npm run logger -- tempo worklogs --since 7d
+npm run loom -- tempo worklogs --since 7d
 ```
 
 ## Tools available in this project
 
-- **`logger <source> <action> [flags]`** — fetch activity events. e.g.
+- **`loom <source> <action> [flags]`** — fetch activity events. e.g.
   `tempo worklogs`. Flags: `--since 7d|2w|YYYY-MM-DD`, `--until`, `--token`,
   `--user`.
-- **`logger tempo log`** — the one write action: create a Tempo worklog.
+- **`loom tempo log`** — the one write action: create a Tempo worklog.
   `--issue <KEY|id>`, `--hours <n>`, `--date`, `--start`, `--description`,
   `--dry-run`, `--yes`. Refuses without an account id; confirms before posting.
-- **`logger guide [source]`** — step-by-step on how to obtain each credential.
-- **`logger keys [list|add|check]`** — credential expiry tracking. `check` exits
+- **`loom guide [source]`** — step-by-step on how to obtain each credential.
+- **`loom keys [list|add|check]`** — credential expiry tracking. `check` exits
   non-zero when a key expires within 30 days. `add --env X --expires YYYY-MM-DD`.
 - **The `logg` skill** (`.claude/skills/logg/`) — orchestrates the connectors to
   draft weekly status, suggest Tempo entries, and flag follow-ups.
@@ -48,12 +48,12 @@ npm run logger -- tempo worklogs --since 7d
 
 - **Agents / pipes:** default to JSON (`--json`), or `--ndjson`. Always pass
   `--no-interactive` from scripts to be safe.
-- **Humans at a TTY:** default to a readable table; `logger` with no args opens
+- **Humans at a TTY:** default to a readable table; `loom` with no args opens
   an interactive menu. Force with `-i`/`--interactive`.
 
 ## Conventions
 
-- **Read-only by default.** The sole exception is `logger tempo log` (create a
+- **Read-only by default.** The sole exception is `loom tempo log` (create a
   worklog). Any new write path must be just as guarded: a dedicated action, an
   explicit account/owner check so we never write on someone else's behalf, and a
   confirm/`--dry-run`/`--yes` flow. Everything else stays read-only with no write

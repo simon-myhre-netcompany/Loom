@@ -1,5 +1,5 @@
 /**
- * Connector registry. Single source of truth for what `logger` can do —
+ * Connector registry. Single source of truth for what `loom` can do —
  * used both for non-interactive dispatch and to drive the interactive menu.
  */
 import type { ActivityEvent } from './types.js';
@@ -27,7 +27,7 @@ export interface ActionSpec {
   prompts: PromptSpec[];
 }
 
-/** How to obtain a credential — shown by `logger guide`. */
+/** How to obtain a credential — shown by `loom guide`. */
 export interface CredentialGuide {
   env: string;
   required: boolean;
@@ -79,12 +79,12 @@ export const CONNECTORS: ConnectorSpec[] = [
           'Choose "Custom" access and grant VIEW on all scopes:',
           '  Accounts, Activities, Approvals, Audit, Periods, Plans,',
           '  Projects, Schemes, Teams, Worklogs.',
-          'For `logger tempo log` (writing time), ALSO grant MANAGE on Worklogs',
-          '  — that is the only write scope Logger uses. Leave everything else',
+          'For `loom tempo log` (writing time), ALSO grant MANAGE on Worklogs',
+          '  — that is the only write scope Loom uses. Leave everything else',
           '  VIEW-only so the token can never write beyond worklogs.',
           'Confirm, copy the token, and set TEMPO_API_TOKEN in .env.',
-          'Register its expiry so `logger keys check` can warn you:',
-          '  logger keys add --env TEMPO_API_TOKEN --expires <365-days-out> \\',
+          'Register its expiry so `loom keys check` can warn you:',
+          '  loom keys add --env TEMPO_API_TOKEN --expires <365-days-out> \\',
           '    --label "Tempo API token (LOGGER)" --source tempo',
         ],
       },
@@ -96,9 +96,9 @@ export const CONNECTORS: ConnectorSpec[] = [
           'Ask Rovo AI: "what\'s my account id".',
           'Copy the accountId (looks like 712020:xxxxxxxx-...) into',
           '  TEMPO_ACCOUNT_ID in .env.',
-          'Without it, Logger fetches every worklog the token can see',
+          'Without it, Loom fetches every worklog the token can see',
           '(the whole org) instead of just yours — so set it.',
-          'It is also REQUIRED for `logger tempo log`: writing refuses to run',
+          'It is also REQUIRED for `loom tempo log`: writing refuses to run',
           'without it, so a worklog can only ever be created under your account.',
         ],
       },
@@ -140,7 +140,7 @@ export const CONNECTORS: ConnectorSpec[] = [
           'Permissions — Add permissions, set all of these to READ:',
           '  Contents, Discussions, Issues, Metadata, Pull requests.',
           'Generate, copy, set GITHUB_TOKEN_PERSONAL in .env, then register:',
-          '  logger keys add --env GITHUB_TOKEN_PERSONAL --expires <date> \\',
+          '  loom keys add --env GITHUB_TOKEN_PERSONAL --expires <date> \\',
           '    --label "GitHub PAT (personal)" --source github',
         ],
       },
@@ -159,7 +159,7 @@ export const CONNECTORS: ConnectorSpec[] = [
           '  Contents, Discussions, Issues, Metadata, Pull requests.',
           'Note: org tokens may need an admin to approve them before they work.',
           'Set GITHUB_TOKEN_OSLO in .env and register its expiry as above.',
-          'Logger reads every GITHUB_TOKEN / GITHUB_TOKEN_* var and merges them,',
+          'Loom reads every GITHUB_TOKEN / GITHUB_TOKEN_* var and merges them,',
           'so add as many orgs as you like with more GITHUB_TOKEN_<NAME> vars.',
         ],
       },
@@ -196,11 +196,11 @@ export const CONNECTORS: ConnectorSpec[] = [
           '   npm run build      # compiles bin/calendar-helper',
           '',
           '3. Grant Calendar permission (one time):',
-          '   Run `logger calendar events` once. macOS prompts for Calendar',
+          '   Run `loom calendar events` once. macOS prompts for Calendar',
           '   access — allow it. If no prompt appears, go to System Settings →',
           '   Privacy & Security → Calendars and enable your terminal app.',
           '',
-          'That is it — then `logger calendar events --since 14d` works.',
+          'That is it — then `loom calendar events --since 14d` works.',
         ],
       },
     ],
@@ -238,7 +238,7 @@ export const CONNECTORS: ConnectorSpec[] = [
           '  → "Create API token".',
           'Name: LOGGER. Set an expiry (e.g. 365 days).',
           'Copy the token and set ATLASSIAN_API_TOKEN in .env, then register:',
-          '  logger keys add --env ATLASSIAN_API_TOKEN --expires <date> \\',
+          '  loom keys add --env ATLASSIAN_API_TOKEN --expires <date> \\',
           '    --label "Atlassian API token (LOGGER)" --source atlassian',
         ],
       },
@@ -281,7 +281,7 @@ export const CONNECTORS: ConnectorSpec[] = [
         required: true,
         steps: [
           'Confluence uses the SAME Atlassian token as Jira — if you set up Jira,',
-          '  you are already done. See `logger guide jira`.',
+          '  you are already done. See `loom guide jira`.',
           'Needs ATLASSIAN_EMAIL + ATLASSIAN_API_TOKEN in .env.',
           'Optional: CONFLUENCE_BASE_URL (defaults to',
           '  https://oslo-kommune.atlassian.net/wiki).',
@@ -322,7 +322,7 @@ export const CONNECTORS: ConnectorSpec[] = [
           '   - "Request to Install" → needs an admin; ask IT or try another',
           '     workspace where you can self-serve.',
           '5. Copy the "User OAuth Token" (starts with xoxp-).',
-          '6. Set it in .env as SLACK_TOKEN_OSLO (or _NETCOMPANY, etc.) — Logger',
+          '6. Set it in .env as SLACK_TOKEN_OSLO (or _NETCOMPANY, etc.) — Loom',
           '   reads every SLACK_TOKEN / SLACK_TOKEN_* var and merges workspaces.',
           '',
           'Note: search.messages must be enabled for the workspace (it is on most',
@@ -357,11 +357,11 @@ export const CONNECTORS: ConnectorSpec[] = [
           '   Oslo kommune mail (Microsoft Exchange / 365). Enable "Mail".',
           '',
           '2. Grant Automation permission (one time):',
-          '   Run `logger mail sent` once. macOS prompts "<terminal> wants to',
+          '   Run `loom mail sent` once. macOS prompts "<terminal> wants to',
           '   control Mail" — click OK. If no prompt, enable it under System',
           '   Settings → Privacy & Security → Automation → your terminal → Mail.',
           '',
-          'Then `logger mail sent --since 14d` lists the emails you sent.',
+          'Then `loom mail sent --since 14d` lists the emails you sent.',
           'Note: reads your Sent folders (Sent / Sendte elementer) across',
           'all accounts and merges them.',
         ],

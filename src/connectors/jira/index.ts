@@ -1,7 +1,7 @@
 /**
  * Jira connector — command handlers. Read-only.
  *
- *   logger jira issues [--since 7d] [--until YYYY-MM-DD] [--jql "..."]
+ *   loom jira issues [--since 7d] [--until YYYY-MM-DD] [--jql "..."]
  *
  * Default scope: issues you're assigned to or have logged work on, updated in
  * the range. Override entirely with --jql.
@@ -59,7 +59,7 @@ function context(argv: string[]): Ctx {
   if (!auth) {
     throw new Error(
       'Missing Atlassian credentials. Set ATLASSIAN_EMAIL and ATLASSIAN_API_TOKEN ' +
-        '(and optionally JIRA_BASE_URL). Run `logger guide jira` for how to get them.'
+        '(and optionally JIRA_BASE_URL). Run `loom guide jira` for how to get them.'
     );
   }
   const sinceStr = typeof flags.since === 'string' ? flags.since : '7d';
@@ -162,6 +162,6 @@ function toEvent(issue: JiraIssue, base: string): ActivityEvent {
 function usage(reason: string): Error {
   return new Error(
     `jira: ${reason}\n` +
-      'usage: logger jira <issues|comments> [--since 7d] [--until YYYY-MM-DD] [--jql "..."] [--key ABC-1,ABC-2]'
+      'usage: loom jira <issues|comments> [--since 7d] [--until YYYY-MM-DD] [--jql "..."] [--key ABC-1,ABC-2]'
   );
 }
