@@ -1,11 +1,19 @@
 # Loom
 
-Personal work-history aggregator. Read-only CLI connectors that each pull from
-one source and emit a **normalized activity-event** stream, so the `logg` skill
-(and you, in chat) can reason over everything you did across systems — to draft
-a weekly status, decide what Tempo hours to fill, or flag follow-ups.
+An AI-driven interface to your work apps. `loom` is a CLI — **built for an agent
+to drive** — that connects to the systems you work in (Tempo, Jira, Confluence,
+GitHub, Slack, Apple Mail, Apple Calendar) and exposes them through one command,
+so an assistant can fetch your history and act on your behalf instead of you
+copy-pasting between apps.
 
-See [`GOAL.md`](./GOAL.md) for the full motivation, design, and roadmap.
+Each connector emits a **normalized activity-event** stream, so everything you
+did across systems merges into one timeline. On top of that the skills reason
+over it: **`loom-search`** finds things across all apps (a ticket, a PR, a
+thread, an email); **`loom-logg`** drafts your weekly status and fills Tempo.
+
+Mostly **read-only**, with one deliberate write path — `loom tempo log` creates
+Tempo worklogs under your own account, with confirmation. See [`GOAL.md`](./GOAL.md)
+for the full motivation, design, and roadmap.
 
 ## Status
 
