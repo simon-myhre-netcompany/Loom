@@ -35,6 +35,8 @@ to run without `TEMPO_ACCOUNT_ID`) and confirms before posting. Other writes
 
 ```bash
 npm install
+npm run build          # emit dist/
+npm link               # makes `loom` available globally on your PATH
 cp .env.example .env   # then fill in your tokens
 ```
 
@@ -43,13 +45,15 @@ Keychain later.
 
 ## Usage
 
-```bash
-# via npm (dev, runs TypeScript directly)
-npm run loom -- tempo worklogs --since 7d
+Once linked, call `loom` directly from anywhere — it finds the project `.env`
+regardless of your current directory:
 
-# or build once and run the binary
-npm run build
-node dist/cli.js tempo worklogs --since 2w --ndjson
+```bash
+loom tempo worklogs --since 7d
+loom tempo worklogs --since 2w --ndjson
+
+# dev (run the TypeScript directly from the repo, no build/link needed):
+npm run loom -- tempo worklogs --since 7d
 ```
 
 Every command prints a JSON array of activity events to stdout:
@@ -78,10 +82,10 @@ It creates a Tempo worklog under **your** account and nobody else's.
 
 ```bash
 # Preview the payload without posting (always safe):
-node dist/cli.js tempo log --issue TIL-123 --hours 1.5 --dry-run
+loom tempo log --issue TIL-123 --hours 1.5 --dry-run
 
 # Post it — asks to confirm at a TTY; --yes skips the prompt (scripts/agents):
-node dist/cli.js tempo log --issue TIL-123 --hours 1.5 --description "Refined estimate" --yes
+loom tempo log --issue TIL-123 --hours 1.5 --description "Refined estimate" --yes
 ```
 
 On success it prints the created worklog's id and emits the event:
@@ -131,8 +135,14 @@ Don't remember where a key comes from? `loom guide tempo` prints the steps.
 
 ## Architecture
 
-- **Connectors** (`src/connectors/<source>/`) — dumb, read-only, one per source.
+- **Connectors** (`src/connectors/<source>/`) — one per source, read-only except
+  Tempo, which also has the `log` (write) path.
 - **Normalized event** (`src/types.ts`) — the shared contract every connector
   emits.
-- **`logg` skill** (`.claude/skills/logg/`) — orchestrates the connectors and
-  reasons over the merged timeline in conversation.
+- **Registry** (`src/registry.ts`) — single source of truth for sources,
+  actions, prompts, and credential guides.
+- **Skills** (`.claude/skills/`) — orchestrate the connectors in conversation:
+  - **`loom-search`** — fetch/find things across all apps (tickets, PRs,
+    messages, mail, pages) so you don't copy-paste from app to agent.
+  - **`loom-logg`** — search your history, then fill Tempo (write, after you
+    agree) or draft a short ukentlig status (read-only).
