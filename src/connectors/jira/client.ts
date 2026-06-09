@@ -3,7 +3,7 @@
  * Uses the current enhanced search endpoint POST /rest/api/3/search/jql with
  * nextPageToken pagination.
  */
-import { fetchJson } from '../../util/http.js';
+import { fetchJson, fetchVoid } from '../../util/http.js';
 import { basicAuthHeader } from '../../util/atlassian.js';
 
 export const DEFAULT_JIRA_BASE = 'https://oslo-kommune.atlassian.net';
@@ -100,6 +100,128 @@ export async function getComments(
     if (startAt >= (res.total ?? 0)) break;
   }
   return out;
+}
+
+// ---------------------------------------------------------------------------
+// Write helpers (guarded in index.ts). All act as the authenticated user — the
+// Basic-auth account — so there is no way to write on someone else's behalf.
+// Use the v2 endpoints so bodies are plain strings (no ADF wrapping).
+// ---------------------------------------------------------------------------
+
+/** A fuller read of one issue, used to preview a write (current → new). */
+export interface JiraIssueDetail {
+  id: number;
+  key: string;
+  summary?: string;
+  status?: string;
+  description?: string;
+  assignee?: string;
+  originalEstimate?: string;
+  remainingEstimate?: string;
+}
+
+export async function getIssueDetail(
+  base: string,
+  email: string,
+  token: string,
+  key: string
+): Promise<JiraIssueDetail> {
+  const headers = { Authorization: basicAuthHeader(email, token) };
+  const issue = await fetchJson<{
+    id: string;
+    key: string;
+    fields?: {
+      summary?: string;
+      status?: { name?: string };
+      description?: string | null;
+      assignee?: { displayName?: string } | null;
+      timetracking?: { originalEstimate?: string; remainingEstimate?: string };
+    };
+  }>(
+    `${base}/rest/api/2/issue/${encodeURIComponent(key)}` +
+      `?fields=summary,status,description,assignee,timetracking`,
+    { headers }
+  );
+  const f = issue.fields ?? {};
+  return {
+    id: Number(issue.id),
+    key: issue.key,
+    summary: f.summary,
+    status: f.status?.name,
+    description: f.description ?? undefined,
+    assignee: f.assignee?.displayName ?? undefined,
+    originalEstimate: f.timetracking?.originalEstimate,
+    remainingEstimate: f.timetracking?.remainingEstimate,
+  };
+}
+
+/** Post a comment (plain text). Returns the created comment. */
+export async function addComment(
+  base: string,
+  email: string,
+  token: string,
+  key: string,
+  body: string
+): Promise<JiraComment> {
+  const headers = { Authorization: basicAuthHeader(email, token) };
+  return fetchJson<JiraComment>(
+    `${base}/rest/api/2/issue/${encodeURIComponent(key)}/comment`,
+    { method: 'POST', headers, body: JSON.stringify({ body }) }
+  );
+}
+
+/** A status transition available from the issue's current status. */
+export interface JiraTransition {
+  id: string;
+  name: string;
+  to?: { name?: string };
+}
+
+/** The transitions currently available on an issue (depends on its status). */
+export async function getTransitions(
+  base: string,
+  email: string,
+  token: string,
+  key: string
+): Promise<JiraTransition[]> {
+  const headers = { Authorization: basicAuthHeader(email, token) };
+  const res = await fetchJson<{ transitions?: JiraTransition[] }>(
+    `${base}/rest/api/2/issue/${encodeURIComponent(key)}/transitions`,
+    { headers }
+  );
+  return res.transitions ?? [];
+}
+
+/** Apply a status transition by its id. Returns 204 (no body). */
+export async function transitionIssue(
+  base: string,
+  email: string,
+  token: string,
+  key: string,
+  transitionId: string
+): Promise<void> {
+  const headers = { Authorization: basicAuthHeader(email, token) };
+  await fetchVoid(`${base}/rest/api/2/issue/${encodeURIComponent(key)}/transitions`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ transition: { id: transitionId } }),
+  });
+}
+
+/** Update arbitrary issue fields (description, timetracking, ...). 204, no body. */
+export async function updateIssueFields(
+  base: string,
+  email: string,
+  token: string,
+  key: string,
+  fields: Record<string, unknown>
+): Promise<void> {
+  const headers = { Authorization: basicAuthHeader(email, token) };
+  await fetchVoid(`${base}/rest/api/2/issue/${encodeURIComponent(key)}`, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify({ fields }),
+  });
 }
 
 export async function searchIssues(params: SearchParams): Promise<JiraIssue[]> {

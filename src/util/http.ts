@@ -47,6 +47,37 @@ export async function fetchJson<T = unknown>(url: string, opts: FetchOptions = {
 }
 
 /**
+ * Like `fetchJson`, but for write requests whose success body is empty or
+ * uninteresting (Jira PUT/POST transitions return 204 No Content). Throws on
+ * non-2xx with the same friendly errors; returns nothing.
+ */
+export async function fetchVoid(url: string, opts: FetchOptions = {}): Promise<void> {
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: opts.method ?? 'GET',
+      headers: buildHeaders(opts),
+      body: opts.body,
+    });
+  } catch (err) {
+    throw new Error(`Network error contacting ${hostOf(url)}: ${(err as Error).message}`);
+  }
+
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    if (res.status === 401 || res.status === 403) {
+      throw new Error(
+        `Access denied by ${hostOf(url)} (${res.status}). Check the API token / permissions.`
+      );
+    }
+    throw new Error(
+      `Request to ${hostOf(url)} failed (${res.status} ${res.statusText})` +
+        (detail ? `: ${detail.slice(0, 300)}` : '')
+    );
+  }
+}
+
+/**
  * Fetch a paginated Tempo-style endpoint that returns
  * `{ results: T[], metadata: { next?: string } }`, following `metadata.next`
  * until exhausted. Returns the concatenated `results`.

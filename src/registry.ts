@@ -207,7 +207,7 @@ export const CONNECTORS: ConnectorSpec[] = [
   },
   {
     source: 'jira',
-    description: 'Jira issues you work on (assignee / worklog author)',
+    description: 'Jira issues you work on (read) + guarded writes (comment, status, ...)',
     run: jira.run,
     actions: [
       {
@@ -227,6 +227,39 @@ export const CONNECTORS: ConnectorSpec[] = [
           { key: 'all', label: "Include everyone's comments? (with --key: the whole thread)", prompt: false },
         ],
       },
+      {
+        name: 'comment',
+        description: 'WRITE: post a comment on an issue (confirms; --dry-run/--yes)',
+        prompts: [
+          { key: 'key', label: 'Issue key (e.g. SOT-169)' },
+          { key: 'body', label: 'Comment text' },
+        ],
+      },
+      {
+        name: 'transition',
+        description: 'WRITE: change an issue\'s status (confirms; --dry-run/--yes)',
+        prompts: [
+          { key: 'key', label: 'Issue key (e.g. SOT-169)' },
+          { key: 'to', label: 'Target status (e.g. "In Progress", "Done")' },
+        ],
+      },
+      {
+        name: 'describe',
+        description: 'WRITE: replace an issue\'s description (confirms; --dry-run/--yes)',
+        prompts: [
+          { key: 'key', label: 'Issue key (e.g. SOT-169)' },
+          { key: 'body', label: 'New description' },
+        ],
+      },
+      {
+        name: 'estimate',
+        description: 'WRITE: set original/remaining time estimate (confirms; --dry-run/--yes)',
+        prompts: [
+          { key: 'key', label: 'Issue key (e.g. SOT-169)' },
+          { key: 'original', label: 'Original estimate (e.g. 3h, 1d 4h; blank to skip)', prompt: false },
+          { key: 'remaining', label: 'Remaining estimate (e.g. 2h; blank to skip)', prompt: false },
+        ],
+      },
     ],
     setup: [
       {
@@ -241,6 +274,9 @@ export const CONNECTORS: ConnectorSpec[] = [
           'Copy the token and set ATLASSIAN_API_TOKEN in .env, then register:',
           '  loom keys add --env ATLASSIAN_API_TOKEN --expires <date> \\',
           '    --label "Atlassian API token (LOOM)" --source atlassian',
+          'The same token also authorizes the guarded write actions (comment,',
+          '  transition, describe, estimate) — they act AS you, limited to what',
+          '  your Jira account is allowed to do.',
         ],
       },
       {

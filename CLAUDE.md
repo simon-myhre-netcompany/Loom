@@ -35,9 +35,15 @@ npm run loom -- tempo worklogs --since 7d
 - **`loom <source> <action> [flags]`** — fetch activity events. e.g.
   `tempo worklogs`. Flags: `--since 7d|2w|YYYY-MM-DD`, `--until`, `--token`,
   `--user`.
-- **`loom tempo log`** — the one write action: create a Tempo worklog.
-  `--issue <KEY|id>`, `--hours <n>`, `--date`, `--start`, `--description`,
-  `--dry-run`, `--yes`. Refuses without an account id; confirms before posting.
+- **`loom tempo log`** — create a Tempo worklog. `--issue <KEY|id>`,
+  `--hours <n>`, `--date`, `--start`, `--description`, `--dry-run`, `--yes`.
+  Refuses without an account id; confirms before posting.
+- **`loom jira <comment|transition|describe|estimate>`** — guarded Jira writes,
+  one issue at a time via `--key`. `comment`/`describe` take `--body`,
+  `transition` takes `--to "<status>"`, `estimate` takes `--original`/
+  `--remaining` (Jira durations like `3h`, `1d 4h`). All preview the change and
+  confirm before writing (`--dry-run` to preview, `--yes` to skip the prompt);
+  they act as the authenticated Atlassian user.
 - **`loom guide [source]`** — step-by-step on how to obtain each credential.
 - **`loom keys [list|add|check]`** — credential expiry tracking. `check` exits
   non-zero when a key expires within 30 days. `add --env X --expires YYYY-MM-DD`.
@@ -53,11 +59,13 @@ npm run loom -- tempo worklogs --since 7d
 
 ## Conventions
 
-- **Read-only by default.** The sole exception is `loom tempo log` (create a
-  worklog). Any new write path must be just as guarded: a dedicated action, an
-  explicit account/owner check so we never write on someone else's behalf, and a
-  confirm/`--dry-run`/`--yes` flow. Everything else stays read-only with no write
-  credentials. Broader writing is still a deliberate later phase (see GOAL.md).
+- **Read-only by default.** The write paths so far are `loom tempo log` (create
+  a worklog) and the guarded `loom jira` writes (`comment`, `transition`,
+  `describe`, `estimate`). Any new write path must be just as guarded: a
+  dedicated action, acting only as the authenticated user (no impersonation) so
+  we never write on someone else's behalf, and a confirm/`--dry-run`/`--yes`
+  flow. Everything else stays read-only. Broader writing is still a deliberate
+  later phase (see GOAL.md).
 - **Every connector emits `ActivityEvent`** (`src/types.ts`) — keep the shape
   stable; add fields rather than renaming.
 - **Register new connectors in `src/registry.ts`** (description, actions,

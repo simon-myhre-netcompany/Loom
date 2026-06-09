@@ -6,14 +6,21 @@
  * Default scope: issues you're assigned to or have logged work on, updated in
  * the range. Override entirely with --jql.
  */
+import { stderr, stdin, stdout } from 'node:process';
 import type { ActivityEvent } from '../../types.js';
 import { flagOrEnv, parseFlags } from '../../util/args.js';
 import { parseSince, toDateString } from '../../util/time.js';
 import { resolveAtlassianAuth } from '../../util/atlassian.js';
+import { confirm } from '../../interactive.js';
 import {
   searchIssues,
   getComments,
   getMyAccountId,
+  getIssueDetail,
+  addComment,
+  getTransitions,
+  transitionIssue,
+  updateIssueFields,
   DEFAULT_JIRA_BASE,
   type JiraIssue,
   type JiraComment,
@@ -37,6 +44,17 @@ export async function run(action: string | undefined, argv: string[]): Promise<A
       return issues(argv);
     case 'comments':
       return comments(argv);
+    // --- write actions (guarded) -------------------------------------------
+    case 'comment':
+      return comment(argv);
+    case 'transition':
+    case 'status':
+      return transition(argv);
+    case 'describe':
+    case 'description':
+      return describe(argv);
+    case 'estimate':
+      return estimate(argv);
     default:
       throw usage(`unknown action "${action}"`);
   }
@@ -126,6 +144,249 @@ function inRange(iso: string | undefined, fromMs: number, untilMs: number): bool
   return t >= fromMs && t <= untilMs;
 }
 
+// ===========================================================================
+// Write actions. Every one is guarded the same way as `tempo log`:
+//   1. needs Atlassian credentials (resolved by context()),
+//   2. acts ONLY as the authenticated user — there is no impersonation param,
+//      so we can never write on someone else's behalf,
+//   3. previews the change and confirms before doing it (skip with --yes,
+//      preview-only with --dry-run).
+// Human-facing preview/success text goes to stderr so stdout stays clean JSON.
+// ===========================================================================
+
+/** loom jira comment --key K --body "..." [--dry-run] [--yes] */
+async function comment(argv: string[]): Promise<ActivityEvent[]> {
+  const { base, email, token, flags } = context(argv);
+  const key = requireKey(flags, 'comment');
+  const body = requireStr(flags, 'body', 'comment: --body "..." is required');
+
+  const detail = await getIssueDetail(base, email, token, key);
+  const plan = [`About to comment on ${key} — ${detail.summary ?? ''}`.trimEnd(), indent(body)].join(
+    '\n'
+  );
+
+  if (flags['dry-run']) {
+    stderr.write(plan + '\n(dry-run — nothing was changed.)\n');
+    return [commentToEvent({ id: '(preview)', body, created: '' }, key, base)];
+  }
+  if (!(await confirmOrAbort(plan, flags))) return [];
+
+  const created = await addComment(base, email, token, key, body);
+  stderr.write(`✅ Commented on ${key}.\n`);
+  return [commentToEvent(created, key, base)];
+}
+
+/** loom jira transition --key K --to "In Progress" [--dry-run] [--yes] */
+async function transition(argv: string[]): Promise<ActivityEvent[]> {
+  const { base, email, token, flags } = context(argv);
+  const key = requireKey(flags, 'transition');
+  const to = requireStr(
+    flags,
+    'to',
+    'transition: --to "<status>" is required (e.g. --to "In Progress")'
+  );
+
+  const [detail, transitions] = await Promise.all([
+    getIssueDetail(base, email, token, key),
+    getTransitions(base, email, token, key),
+  ]);
+  const target = transitions.find((t) => eqi(t.name, to) || eqi(t.to?.name, to));
+  if (!target) {
+    const available = transitions
+      .map((t) => (t.to?.name && !eqi(t.to.name, t.name) ? `"${t.name}" → ${t.to.name}` : `"${t.name}"`))
+      .join(', ');
+    throw new Error(
+      `No transition matching "${to}" from status "${detail.status ?? '?'}" on ${key}. ` +
+        `Available: ${available || '(none — you may lack permission)'}.`
+    );
+  }
+  const newStatus = target.to?.name ?? target.name;
+  const plan =
+    `About to move ${key} (${detail.summary ?? ''}) ` +
+    `from "${detail.status ?? '?'}" to "${newStatus}" (transition "${target.name}").`;
+
+  if (flags['dry-run']) {
+    stderr.write(plan + '\n(dry-run — nothing was changed.)\n');
+    return [statusEvent(key, detail.status, newStatus, base)];
+  }
+  if (!(await confirmOrAbort(plan, flags))) return [];
+
+  await transitionIssue(base, email, token, key, target.id);
+  stderr.write(`✅ ${key} → ${newStatus}.\n`);
+  return [statusEvent(key, detail.status, newStatus, base)];
+}
+
+/** loom jira describe --key K --body "..." [--dry-run] [--yes] */
+async function describe(argv: string[]): Promise<ActivityEvent[]> {
+  const { base, email, token, flags } = context(argv);
+  const key = requireKey(flags, 'describe');
+  const body = requireStr(flags, 'body', 'describe: --body "..." is required (the new description)');
+
+  const detail = await getIssueDetail(base, email, token, key);
+  const plan = [
+    `About to replace the description of ${key} (${detail.summary ?? ''}):`.trimEnd(),
+    `  current: ${preview(detail.description)}`,
+    `  new:     ${preview(body)}`,
+  ].join('\n');
+
+  if (flags['dry-run']) {
+    stderr.write(plan + '\n(dry-run — nothing was changed.)\n');
+    return [updateEvent(key, 'description', detail.summary, base, body)];
+  }
+  if (!(await confirmOrAbort(plan, flags))) return [];
+
+  await updateIssueFields(base, email, token, key, { description: body });
+  stderr.write(`✅ Updated description of ${key}.\n`);
+  return [updateEvent(key, 'description', detail.summary, base, body)];
+}
+
+/** loom jira estimate --key K [--original 3h] [--remaining 2h] [--dry-run] [--yes] */
+async function estimate(argv: string[]): Promise<ActivityEvent[]> {
+  const { base, email, token, flags } = context(argv);
+  const key = requireKey(flags, 'estimate');
+  const original = optStr(flags, 'original');
+  const remaining = optStr(flags, 'remaining');
+  if (!original && !remaining) {
+    throw usage('estimate: pass --original and/or --remaining (e.g. --original 3h --remaining 2h)');
+  }
+  for (const [name, v] of [['original', original], ['remaining', remaining]] as const) {
+    if (v && !isJiraDuration(v)) {
+      throw usage(`estimate: --${name} must be a Jira duration like "3h", "1d 4h", "30m"; got "${v}"`);
+    }
+  }
+
+  const detail = await getIssueDetail(base, email, token, key);
+  const timetracking: { originalEstimate?: string; remainingEstimate?: string } = {};
+  if (original) timetracking.originalEstimate = original;
+  if (remaining) timetracking.remainingEstimate = remaining;
+
+  const lines = [`About to update time estimates on ${key} (${detail.summary ?? ''}):`.trimEnd()];
+  if (original) lines.push(`  original:  ${detail.originalEstimate ?? '(none)'} → ${original}`);
+  if (remaining) lines.push(`  remaining: ${detail.remainingEstimate ?? '(none)'} → ${remaining}`);
+  const plan = lines.join('\n');
+
+  if (flags['dry-run']) {
+    stderr.write(plan + '\n(dry-run — nothing was changed.)\n');
+    return [updateEvent(key, 'estimate', detail.summary, base, JSON.stringify(timetracking))];
+  }
+  if (!(await confirmOrAbort(plan, flags))) return [];
+
+  await updateIssueFields(base, email, token, key, { timetracking });
+  stderr.write(`✅ Updated estimates on ${key}.\n`);
+  return [updateEvent(key, 'estimate', detail.summary, base, JSON.stringify(timetracking))];
+}
+
+// --- write helpers ---------------------------------------------------------
+
+/** A single issue key (writes target one issue at a time). */
+function requireKey(flags: Record<string, string | boolean>, action: string): string {
+  const k = typeof flags.key === 'string' ? flags.key.trim() : '';
+  if (!k) throw usage(`${action}: --key <KEY> is required`);
+  if (k.includes(',')) throw usage(`${action}: writes target one issue at a time (got "${k}")`);
+  return k;
+}
+
+function requireStr(
+  flags: Record<string, string | boolean>,
+  name: string,
+  message: string
+): string {
+  const v = typeof flags[name] === 'string' ? (flags[name] as string).trim() : '';
+  if (!v) throw usage(message);
+  return v;
+}
+
+function optStr(flags: Record<string, string | boolean>, name: string): string | undefined {
+  const v = typeof flags[name] === 'string' ? (flags[name] as string).trim() : '';
+  return v || undefined;
+}
+
+function eqi(a: string | undefined, b: string | undefined): boolean {
+  return !!a && !!b && a.trim().toLowerCase() === b.trim().toLowerCase();
+}
+
+/** Jira duration: one or more "<n><w|d|h|m>" units, space-separated. */
+function isJiraDuration(s: string): boolean {
+  return /^\d+[wdhm](\s+\d+[wdhm])*$/i.test(s.trim());
+}
+
+function preview(s: string | undefined): string {
+  const t = (s ?? '').replace(/\s+/g, ' ').trim();
+  if (!t) return '(empty)';
+  return t.length > 120 ? `${t.slice(0, 120)}…` : t;
+}
+
+function indent(s: string): string {
+  return s
+    .split('\n')
+    .map((l) => `  ${l}`)
+    .join('\n');
+}
+
+/**
+ * Confirm a write, mirroring `tempo log`. With --yes, proceed silently. At a
+ * TTY, print the plan and ask. Otherwise refuse rather than write blind.
+ */
+async function confirmOrAbort(
+  plan: string,
+  flags: Record<string, string | boolean>
+): Promise<boolean> {
+  if (flags.yes || flags.y) return true;
+  if (!canPrompt(flags)) {
+    throw new Error(
+      'Refusing to write without confirmation. Re-run at a terminal to confirm ' +
+        'interactively, pass --yes to skip the prompt, or --dry-run to preview.'
+    );
+  }
+  stderr.write(plan + '\n');
+  const ok = await confirm('Proceed?');
+  if (!ok) stderr.write('Aborted — nothing was changed.\n');
+  return ok;
+}
+
+/** Whether we can ask for interactive confirmation (mirrors cli's isInteractive). */
+function canPrompt(flags: Record<string, string | boolean>): boolean {
+  if (flags['no-interactive']) return false;
+  if (flags.interactive || flags.i) return true;
+  return !!(stdin.isTTY && stdout.isTTY);
+}
+
+function statusEvent(
+  key: string,
+  from: string | undefined,
+  to: string,
+  base: string
+): ActivityEvent {
+  return {
+    timestamp: '',
+    source: 'jira',
+    type: 'transition',
+    ref: key,
+    title: `${key} status: ${from ?? '?'} → ${to}`,
+    url: `${base}/browse/${key}`,
+    raw: { key, from, to },
+  };
+}
+
+function updateEvent(
+  key: string,
+  field: string,
+  summary: string | undefined,
+  base: string,
+  value: string
+): ActivityEvent {
+  return {
+    timestamp: '',
+    source: 'jira',
+    type: `update-${field}`,
+    ref: key,
+    title: `${key} ${field} updated${summary ? `: ${summary}` : ''}`,
+    body: value,
+    url: `${base}/browse/${key}`,
+    raw: { key, field, value },
+  };
+}
+
 function commentToEvent(c: JiraComment, key: string, base: string): ActivityEvent {
   const text = (c.body ?? '').trim();
   const tilKunde = /#TIL[_ ]?KUNDE/i.test(text);
@@ -172,6 +433,14 @@ function toEvent(issue: JiraIssue, base: string): ActivityEvent {
 function usage(reason: string): Error {
   return new Error(
     `jira: ${reason}\n` +
-      'usage: loom jira <issues|comments> [--since 7d] [--until YYYY-MM-DD] [--jql "..."] [--key ABC-1,ABC-2] [--all]'
+      'usage:\n' +
+      '  read:\n' +
+      '    loom jira issues   [--since 7d] [--until DATE] [--jql "..."]\n' +
+      '    loom jira comments [--key ABC-1,ABC-2] [--all] [--since 7d]\n' +
+      '  write (all guarded — confirm, or --dry-run / --yes):\n' +
+      '    loom jira comment    --key K --body "..."\n' +
+      '    loom jira transition --key K --to "In Progress"\n' +
+      '    loom jira describe   --key K --body "..."\n' +
+      '    loom jira estimate   --key K [--original 3h] [--remaining 2h]'
   );
 }
