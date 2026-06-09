@@ -260,6 +260,40 @@ export const CONNECTORS: ConnectorSpec[] = [
           { key: 'remaining', label: 'Remaining estimate (e.g. 2h; blank to skip)', prompt: false },
         ],
       },
+      {
+        name: 'assign',
+        description: 'WRITE: set the assignee (confirms; --dry-run/--yes)',
+        prompts: [
+          { key: 'key', label: 'Issue key (e.g. SOT-169)' },
+          { key: 'to', label: 'Assignee (name, email, "me", or "none")' },
+        ],
+      },
+      {
+        name: 'rename',
+        description: 'WRITE: change the summary/title (confirms; --dry-run/--yes)',
+        prompts: [
+          { key: 'key', label: 'Issue key (e.g. SOT-169)' },
+          { key: 'to', label: 'New summary' },
+        ],
+      },
+      {
+        name: 'labels',
+        description: 'WRITE: add/remove labels (confirms; --dry-run/--yes)',
+        prompts: [
+          { key: 'key', label: 'Issue key (e.g. SOT-169)' },
+          { key: 'add', label: 'Labels to add (comma-sep; blank to skip)', prompt: false },
+          { key: 'remove', label: 'Labels to remove (comma-sep; blank to skip)', prompt: false },
+        ],
+      },
+      {
+        name: 'set',
+        description: 'WRITE: set priority and/or due date (confirms; --dry-run/--yes)',
+        prompts: [
+          { key: 'key', label: 'Issue key (e.g. SOT-169)' },
+          { key: 'priority', label: 'Priority (e.g. High; blank to skip)', prompt: false },
+          { key: 'due', label: 'Due date YYYY-MM-DD (blank to skip)', prompt: false },
+        ],
+      },
     ],
     setup: [
       {

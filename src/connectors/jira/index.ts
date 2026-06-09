@@ -17,6 +17,8 @@ import {
   getComments,
   getMyAccountId,
   getIssueDetail,
+  findUser,
+  getPriorities,
   addComment,
   getTransitions,
   transitionIssue,
@@ -55,6 +57,14 @@ export async function run(action: string | undefined, argv: string[]): Promise<A
       return describe(argv);
     case 'estimate':
       return estimate(argv);
+    case 'assign':
+      return assign(argv);
+    case 'rename':
+      return rename(argv);
+    case 'labels':
+      return labels(argv);
+    case 'set':
+      return set(argv);
     default:
       throw usage(`unknown action "${action}"`);
   }
@@ -276,6 +286,143 @@ async function estimate(argv: string[]): Promise<ActivityEvent[]> {
   return [updateEvent(key, 'estimate', detail.summary, base, JSON.stringify(timetracking))];
 }
 
+/** loom jira assign --key K --to <name|email|me|none> [--dry-run] [--yes] */
+async function assign(argv: string[]): Promise<ActivityEvent[]> {
+  const { base, email, token, flags } = context(argv);
+  const key = requireKey(flags, 'assign');
+  const to = requireStr(flags, 'to', 'assign: --to <name|email|me|none> is required');
+
+  const detail = await getIssueDetail(base, email, token, key);
+
+  // Resolve the target: "me" → you, "none"/"unassigned" → clear, else look up.
+  let accountId: string | null;
+  let label: string;
+  if (/^(none|unassigned|clear)$/i.test(to)) {
+    accountId = null;
+    label = '(unassigned)';
+  } else if (/^me$/i.test(to)) {
+    accountId = await getMyAccountId(base, email, token);
+    label = 'me';
+  } else {
+    const user = await findUser(base, email, token, to);
+    if (!user) throw new Error(`assign: no Jira user found matching "${to}".`);
+    accountId = user.accountId;
+    label = user.displayName ?? user.accountId;
+  }
+
+  const plan = `About to set assignee of ${key} (${detail.summary ?? ''}): ${detail.assignee ?? '(unassigned)'} → ${label}.`;
+  if (flags['dry-run']) {
+    stderr.write(plan + '\n(dry-run — nothing was changed.)\n');
+    return [updateEvent(key, 'assignee', detail.summary, base, label)];
+  }
+  if (!(await confirmOrAbort(plan, flags))) return [];
+
+  await updateIssueFields(base, email, token, key, {
+    assignee: accountId === null ? null : { accountId },
+  });
+  stderr.write(`✅ Assigned ${key} to ${label}.\n`);
+  return [updateEvent(key, 'assignee', detail.summary, base, label)];
+}
+
+/** loom jira rename --key K --to "New summary" [--dry-run] [--yes] */
+async function rename(argv: string[]): Promise<ActivityEvent[]> {
+  const { base, email, token, flags } = context(argv);
+  const key = requireKey(flags, 'rename');
+  const to = requireStr(flags, 'to', 'rename: --to "<new summary>" is required');
+
+  const detail = await getIssueDetail(base, email, token, key);
+  const plan = [
+    `About to rename ${key}:`,
+    `  current: ${preview(detail.summary)}`,
+    `  new:     ${preview(to)}`,
+  ].join('\n');
+
+  if (flags['dry-run']) {
+    stderr.write(plan + '\n(dry-run — nothing was changed.)\n');
+    return [updateEvent(key, 'summary', to, base, to)];
+  }
+  if (!(await confirmOrAbort(plan, flags))) return [];
+
+  await updateIssueFields(base, email, token, key, { summary: to });
+  stderr.write(`✅ Renamed ${key}.\n`);
+  return [updateEvent(key, 'summary', to, base, to)];
+}
+
+/** loom jira labels --key K [--add x,y] [--remove z] [--dry-run] [--yes] */
+async function labels(argv: string[]): Promise<ActivityEvent[]> {
+  const { base, email, token, flags } = context(argv);
+  const key = requireKey(flags, 'labels');
+  const add = csv(flags.add);
+  const remove = csv(flags.remove);
+  if (!add.length && !remove.length) {
+    throw usage('labels: pass --add x,y and/or --remove z');
+  }
+
+  const detail = await getIssueDetail(base, email, token, key);
+  const current = detail.labels ?? [];
+  const removeSet = new Set(remove);
+  // Preserve order: keep current (minus removed), then append new ones.
+  const next = [...current.filter((l) => !removeSet.has(l)), ...add.filter((l) => !current.includes(l))];
+
+  const plan = [
+    `About to update labels on ${key} (${detail.summary ?? ''}):`.trimEnd(),
+    `  current: ${current.length ? current.join(', ') : '(none)'}`,
+    `  new:     ${next.length ? next.join(', ') : '(none)'}`,
+  ].join('\n');
+
+  if (flags['dry-run']) {
+    stderr.write(plan + '\n(dry-run — nothing was changed.)\n');
+    return [updateEvent(key, 'labels', detail.summary, base, next.join(', '))];
+  }
+  if (!(await confirmOrAbort(plan, flags))) return [];
+
+  await updateIssueFields(base, email, token, key, { labels: next });
+  stderr.write(`✅ Updated labels on ${key}.\n`);
+  return [updateEvent(key, 'labels', detail.summary, base, next.join(', '))];
+}
+
+/** loom jira set --key K [--priority High] [--due YYYY-MM-DD] [--dry-run] [--yes] */
+async function set(argv: string[]): Promise<ActivityEvent[]> {
+  const { base, email, token, flags } = context(argv);
+  const key = requireKey(flags, 'set');
+  const priority = optStr(flags, 'priority');
+  const due = optStr(flags, 'due');
+  if (!priority && !due) {
+    throw usage('set: pass --priority <name> and/or --due YYYY-MM-DD');
+  }
+  if (due && !/^\d{4}-\d{2}-\d{2}$/.test(due)) {
+    throw usage(`set: --due must be YYYY-MM-DD, got "${due}"`);
+  }
+
+  const detail = await getIssueDetail(base, email, token, key);
+  const fields: Record<string, unknown> = {};
+  if (priority) {
+    // Validate up front — Jira's own error for a bad priority is cryptic.
+    const valid = await getPriorities(base, email, token);
+    const canonical = valid.find((p) => eqi(p, priority));
+    if (!canonical) {
+      throw usage(`set: unknown priority "${priority}". Valid: ${valid.join(', ')}.`);
+    }
+    fields.priority = { name: canonical };
+  }
+  if (due) fields.duedate = due;
+
+  const lines = [`About to update ${key} (${detail.summary ?? ''}):`.trimEnd()];
+  if (priority) lines.push(`  priority: ${detail.priority ?? '(none)'} → ${priority}`);
+  if (due) lines.push(`  due:      ${detail.duedate ?? '(none)'} → ${due}`);
+  const plan = lines.join('\n');
+
+  if (flags['dry-run']) {
+    stderr.write(plan + '\n(dry-run — nothing was changed.)\n');
+    return [updateEvent(key, 'fields', detail.summary, base, JSON.stringify(fields))];
+  }
+  if (!(await confirmOrAbort(plan, flags))) return [];
+
+  await updateIssueFields(base, email, token, key, fields);
+  stderr.write(`✅ Updated ${key}.\n`);
+  return [updateEvent(key, 'fields', detail.summary, base, JSON.stringify(fields))];
+}
+
 // --- write helpers ---------------------------------------------------------
 
 /** A single issue key (writes target one issue at a time). */
@@ -299,6 +446,12 @@ function requireStr(
 function optStr(flags: Record<string, string | boolean>, name: string): string | undefined {
   const v = typeof flags[name] === 'string' ? (flags[name] as string).trim() : '';
   return v || undefined;
+}
+
+/** Parse a comma-separated flag value into a trimmed, de-duplicated list. */
+function csv(value: string | boolean | undefined): string[] {
+  if (typeof value !== 'string') return [];
+  return [...new Set(value.split(',').map((s) => s.trim()).filter(Boolean))];
 }
 
 function eqi(a: string | undefined, b: string | undefined): boolean {
@@ -441,6 +594,10 @@ function usage(reason: string): Error {
       '    loom jira comment    --key K --body "..."\n' +
       '    loom jira transition --key K --to "In Progress"\n' +
       '    loom jira describe   --key K --body "..."\n' +
-      '    loom jira estimate   --key K [--original 3h] [--remaining 2h]'
+      '    loom jira estimate   --key K [--original 3h] [--remaining 2h]\n' +
+      '    loom jira assign     --key K --to <name|email|me|none>\n' +
+      '    loom jira rename     --key K --to "New summary"\n' +
+      '    loom jira labels     --key K [--add x,y] [--remove z]\n' +
+      '    loom jira set        --key K [--priority High] [--due YYYY-MM-DD]'
   );
 }

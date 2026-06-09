@@ -118,6 +118,9 @@ export interface JiraIssueDetail {
   assignee?: string;
   originalEstimate?: string;
   remainingEstimate?: string;
+  labels?: string[];
+  priority?: string;
+  duedate?: string;
 }
 
 export async function getIssueDetail(
@@ -136,10 +139,13 @@ export async function getIssueDetail(
       description?: string | null;
       assignee?: { displayName?: string } | null;
       timetracking?: { originalEstimate?: string; remainingEstimate?: string };
+      labels?: string[];
+      priority?: { name?: string } | null;
+      duedate?: string | null;
     };
   }>(
     `${base}/rest/api/2/issue/${encodeURIComponent(key)}` +
-      `?fields=summary,status,description,assignee,timetracking`,
+      `?fields=summary,status,description,assignee,timetracking,labels,priority,duedate`,
     { headers }
   );
   const f = issue.fields ?? {};
@@ -152,7 +158,46 @@ export async function getIssueDetail(
     assignee: f.assignee?.displayName ?? undefined,
     originalEstimate: f.timetracking?.originalEstimate,
     remainingEstimate: f.timetracking?.remainingEstimate,
+    labels: f.labels ?? [],
+    priority: f.priority?.name ?? undefined,
+    duedate: f.duedate ?? undefined,
   };
+}
+
+/** All priority names defined on this Jira instance (for validating --priority). */
+export async function getPriorities(
+  base: string,
+  email: string,
+  token: string
+): Promise<string[]> {
+  const headers = { Authorization: basicAuthHeader(email, token) };
+  const ps = await fetchJson<Array<{ name?: string }>>(`${base}/rest/api/2/priority`, { headers });
+  return ps.map((p) => p.name).filter((n): n is string => !!n);
+}
+
+/** A user resolved from a name/email query, for assignment. */
+export interface JiraUser {
+  accountId: string;
+  displayName?: string;
+}
+
+/**
+ * Find a single user by name or email (for --assign). Returns the first match,
+ * or null if none. Uses the Cloud user search endpoint.
+ */
+export async function findUser(
+  base: string,
+  email: string,
+  token: string,
+  query: string
+): Promise<JiraUser | null> {
+  const headers = { Authorization: basicAuthHeader(email, token) };
+  const users = await fetchJson<Array<{ accountId: string; displayName?: string }>>(
+    `${base}/rest/api/3/user/search?query=${encodeURIComponent(query)}&maxResults=2`,
+    { headers }
+  );
+  if (!users.length) return null;
+  return { accountId: users[0].accountId, displayName: users[0].displayName };
 }
 
 /** Post a comment (plain text). Returns the created comment. */

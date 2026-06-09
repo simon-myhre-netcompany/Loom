@@ -38,10 +38,12 @@ npm run loom -- tempo worklogs --since 7d
 - **`loom tempo log`** — create a Tempo worklog. `--issue <KEY|id>`,
   `--hours <n>`, `--date`, `--start`, `--description`, `--dry-run`, `--yes`.
   Refuses without an account id; confirms before posting.
-- **`loom jira <comment|transition|describe|estimate>`** — guarded Jira writes,
-  one issue at a time via `--key`. `comment`/`describe` take `--body`,
-  `transition` takes `--to "<status>"`, `estimate` takes `--original`/
-  `--remaining` (Jira durations like `3h`, `1d 4h`). All preview the change and
+- **`loom jira <comment|transition|describe|estimate|assign|rename|labels|set>`**
+  — guarded Jira writes, one issue at a time via `--key`. `comment`/`describe`
+  take `--body`; `transition`/`assign`/`rename` take `--to`; `estimate` takes
+  `--original`/`--remaining` (Jira durations like `3h`, `1d 4h`); `labels` takes
+  `--add`/`--remove` (comma-sep); `set` takes `--priority`/`--due` (YYYY-MM-DD);
+  `assign --to` accepts a name/email/`me`/`none`. All preview the change and
   confirm before writing (`--dry-run` to preview, `--yes` to skip the prompt);
   they act as the authenticated Atlassian user.
 - **`loom guide [source]`** — step-by-step on how to obtain each credential.
