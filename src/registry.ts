@@ -220,10 +220,11 @@ export const CONNECTORS: ConnectorSpec[] = [
       },
       {
         name: 'comments',
-        description: 'Comments you posted on your issues (tags #TIL_KUNDE)',
+        description: 'Comments on your issues (yours tagged #TIL_KUNDE; --all for everyone)',
         prompts: [
           { key: 'since', label: 'Look back how far? (e.g. 7d, 2w, YYYY-MM-DD)', default: '7d' },
           { key: 'key', label: 'Specific issue key(s)? (comma-sep, blank = your recent issues)', prompt: false },
+          { key: 'all', label: "Include everyone's comments? (with --key: the whole thread)", prompt: false },
         ],
       },
     ],

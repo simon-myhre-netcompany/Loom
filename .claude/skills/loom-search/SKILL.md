@@ -14,7 +14,7 @@ to *pull in context* you need to help him.
 Apps Loom can search:
 
 - **tempo** — his logged hours (worklogs).
-- **jira** — issues he works on, and comments he posted.
+- **jira** — issues he works on, and comments (his, or everyone's with `--all`).
 - **confluence** — pages he's edited (incl. his weekly status).
 - **github** — PRs & commits he authored (personal + oslo-kommune org).
 - **slack** — messages he sent, across workspaces.
@@ -33,7 +33,8 @@ url? }`), so results from different apps merge cleanly.
 ```bash
 loom jira issues --since 2w --json                 # your recent issues
 loom jira issues --jql "key = UKESASADF-937" --json  # a specific ticket
-loom jira comments --key UKESASADF-937 --json      # comments on one ticket
+loom jira comments --key UKESASADF-937 --json      # your comments on one ticket
+loom jira comments --key UKESASADF-937 --all --json  # the WHOLE thread (everyone)
 loom github prs --since 2w --json                  # PRs you authored
 loom github commits --since 1w --json
 loom slack messages --since 1w --json              # messages you sent
@@ -45,7 +46,9 @@ loom tempo worklogs --since 1w --json
 
 Useful flags: `--since 7d|24h|2w|YYYY-MM-DD`, `--until YYYY-MM-DD`, `--json`
 (default for agents), `--ndjson`. Jira takes `--jql "..."` for a precise query
-and `--key ABC-1,ABC-2` to target specific tickets. Run `loom --help` (or
+and `--key ABC-1,ABC-2` to target specific tickets. `jira comments` defaults to
+*your* comments; add `--all` to get every author's (with `--key`, the full
+thread regardless of date). Run `loom --help` (or
 `loom guide <source>`) to see what's wired up.
 
 ## How to use it well

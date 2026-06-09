@@ -86,6 +86,10 @@ async function issues(argv: string[]): Promise<ActivityEvent[]> {
 async function comments(argv: string[]): Promise<ActivityEvent[]> {
   const { base, email, token, from, until, flags } = context(argv);
 
+  // --all: include comments from everyone (not just you) and, when you've named
+  // a specific --key, the whole thread regardless of date.
+  const all = flags.all === true || flags.all === 'true';
+
   // Which issues to scan: explicit --key, custom --jql, or your recent issues.
   let keys: string[];
   if (typeof flags.key === 'string') {
@@ -96,16 +100,20 @@ async function comments(argv: string[]): Promise<ActivityEvent[]> {
     keys = found.map((i) => i.key);
   }
 
-  const me = await getMyAccountId(base, email, token);
+  // Only resolve "me" when we actually filter by author.
+  const me = all ? undefined : await getMyAccountId(base, email, token);
+  // A named --key in --all mode means "give me the full thread" — skip the range.
+  const wholeThread = all && typeof flags.key === 'string';
   const fromMs = new Date(`${from}T00:00:00`).getTime();
   const untilMs = new Date(`${until}T23:59:59`).getTime();
 
-  // Fetch each issue's comments concurrently, keep only mine in the range.
+  // Fetch each issue's comments concurrently, then filter by author/range.
   const perIssue = await Promise.all(
     keys.map(async (key) => {
       const cs = await getComments(base, email, token, key);
       return cs
-        .filter((c) => c.author?.accountId === me && inRange(c.created, fromMs, untilMs))
+        .filter((c) => (me === undefined ? true : c.author?.accountId === me))
+        .filter((c) => wholeThread || inRange(c.created, fromMs, untilMs))
         .map((c) => commentToEvent(c, key, base));
     })
   );
@@ -124,14 +132,16 @@ function commentToEvent(c: JiraComment, key: string, base: string): ActivityEven
   // Summarize with the first meaningful line (skip a lone #TIL_KUNDE marker).
   const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
   const summary = lines.find((l) => !/^#TIL[_ ]?KUNDE$/i.test(l)) ?? lines[0] ?? '';
+  const author = c.author?.displayName;
   return {
     timestamp: c.created ?? '',
     source: 'jira',
     // Tag (don't filter) customer-facing comments so the skill can spot them.
     type: tilKunde ? 'comment-til-kunde' : 'comment',
     ref: key,
-    title: `${key} comment${tilKunde ? ' #TIL_KUNDE' : ''}: ${summary.slice(0, 70)}`,
+    title: `${key} comment${author ? ` by ${author}` : ''}${tilKunde ? ' #TIL_KUNDE' : ''}: ${summary.slice(0, 70)}`,
     body: text || undefined,
+    actor: author,
     url: `${base}/browse/${key}?focusedCommentId=${c.id}`,
     raw: c,
   };
@@ -162,6 +172,6 @@ function toEvent(issue: JiraIssue, base: string): ActivityEvent {
 function usage(reason: string): Error {
   return new Error(
     `jira: ${reason}\n` +
-      'usage: loom jira <issues|comments> [--since 7d] [--until YYYY-MM-DD] [--jql "..."] [--key ABC-1,ABC-2]'
+      'usage: loom jira <issues|comments> [--since 7d] [--until YYYY-MM-DD] [--jql "..."] [--key ABC-1,ABC-2] [--all]'
   );
 }

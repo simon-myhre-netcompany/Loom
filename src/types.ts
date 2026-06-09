@@ -18,6 +18,8 @@ export interface ActivityEvent {
   title: string;
   /** Optional fuller text (comment body, commit message, description). */
   body?: string;
+  /** Optional display name of who performed the action (e.g. comment author). */
+  actor?: string;
   /** Optional deep link back to the source. */
   url?: string;
   /** Optional original payload, for power use / debugging. */
