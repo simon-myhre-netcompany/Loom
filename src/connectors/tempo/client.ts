@@ -28,6 +28,23 @@ export interface TempoWorklog {
   author?: { accountId?: string; self?: string };
 }
 
+/** A Tempo Account (billing/cost bucket worklogs are booked against). */
+export interface TempoAccount {
+  id: number;
+  key: string;
+  name: string;
+  status?: string;
+  global?: boolean;
+  customer?: { name?: string; key?: string };
+  category?: { name?: string };
+  lead?: { accountId?: string };
+}
+
+/** All Tempo accounts the token can see (paginated). */
+export async function getAccounts(token: string): Promise<TempoAccount[]> {
+  return fetchPaginated<TempoAccount>(`${TEMPO_API_BASE}/accounts`, { token });
+}
+
 export interface GetWorklogsParams {
   token: string;
   /** When set, scope to this user. Otherwise fetch all worklogs the token sees. */

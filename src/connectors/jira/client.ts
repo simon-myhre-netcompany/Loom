@@ -200,6 +200,22 @@ export async function findUser(
   return { accountId: users[0].accountId, displayName: users[0].displayName };
 }
 
+/** Read one (possibly custom) field's raw value off an issue. */
+export async function getIssueFieldValue(
+  base: string,
+  email: string,
+  token: string,
+  key: string,
+  fieldId: string
+): Promise<unknown> {
+  const headers = { Authorization: basicAuthHeader(email, token) };
+  const issue = await fetchJson<{ fields?: Record<string, unknown> }>(
+    `${base}/rest/api/2/issue/${encodeURIComponent(key)}?fields=${encodeURIComponent(fieldId)}`,
+    { headers }
+  );
+  return issue.fields?.[fieldId];
+}
+
 /** Post a comment (plain text). Returns the created comment. */
 export async function addComment(
   base: string,

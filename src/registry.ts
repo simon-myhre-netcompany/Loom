@@ -46,7 +46,7 @@ export interface ConnectorSpec {
 export const CONNECTORS: ConnectorSpec[] = [
   {
     source: 'tempo',
-    description: 'Tempo worklogs — your logged hours (read), and log time (write)',
+    description: 'Tempo worklogs (read) + log time and set an issue\'s Account (write)',
     run: tempo.run,
     actions: [
       {
@@ -65,6 +65,21 @@ export const CONNECTORS: ConnectorSpec[] = [
           { key: 'hours', label: 'Hours spent (e.g. 1.5)' },
           { key: 'date', label: 'Work date (YYYY-MM-DD, blank = today)', prompt: false },
           { key: 'description', label: 'Description (blank = issue summary)', prompt: false },
+        ],
+      },
+      {
+        name: 'accounts',
+        description: 'List Tempo accounts (billing buckets); --search to filter, --all for closed',
+        prompts: [
+          { key: 'search', label: 'Filter by key/name (blank = all open)', prompt: false },
+        ],
+      },
+      {
+        name: 'set-account',
+        description: 'WRITE: set an issue\'s Tempo Account (confirms; --dry-run/--yes)',
+        prompts: [
+          { key: 'issue', label: 'Issue key (e.g. SOT-169)' },
+          { key: 'account', label: 'Account key, numeric id, or "none" to clear' },
         ],
       },
     ],

@@ -38,6 +38,14 @@ npm run loom -- tempo worklogs --since 7d
 - **`loom tempo log`** — create a Tempo worklog. `--issue <KEY|id>`,
   `--hours <n>`, `--date`, `--start`, `--description`, `--dry-run`, `--yes`.
   Refuses without an account id; confirms before posting.
+- **`loom tempo accounts`** — list Tempo accounts (billing buckets). `--search`
+  to filter by key/name, `--all` to include closed ones.
+- **`loom tempo set-account`** — guarded write: set an issue's Tempo Account
+  field. `--issue <KEY>`, `--account <key|id|none>`, `--dry-run`, `--yes`. The
+  Account is a per-instance Tempo (Forge) custom field; the field id defaults to
+  `customfield_10039` and is overridable via `--account-field` /
+  `JIRA_ACCOUNT_FIELD`. Resolving an account by key/name needs `TEMPO_API_TOKEN`
+  (a numeric id doesn't).
 - **`loom jira <comment|transition|describe|estimate|assign|rename|labels|set>`**
   — guarded Jira writes, one issue at a time via `--key`. `comment`/`describe`
   take `--body`; `transition`/`assign`/`rename` take `--to`; `estimate` takes
