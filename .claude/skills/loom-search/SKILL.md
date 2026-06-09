@@ -13,7 +13,7 @@ to *pull in context* you need to help him.
 
 Apps Loom can search:
 
-- **tempo** — his logged hours (worklogs).
+- **tempo** — his logged hours (worklogs) and billing accounts.
 - **jira** — issues he works on, and comments (his, or everyone's with `--all`).
 - **confluence** — pages he's edited (incl. his weekly status).
 - **github** — PRs & commits he authored (personal + oslo-kommune org).
@@ -21,8 +21,8 @@ Apps Loom can search:
 - **mail** — Apple Mail messages he sent (Netcompany + Oslo kommune).
 - **calendar** — Apple Calendar meetings & events (local).
 
-> This skill is **read-only / search**. (Writing a Tempo worklog lives in the
-> `loom-logg` skill.)
+> This skill is **read-only / search**. Loom *can* write (worklogs, a ticket's
+> Account, and Jira fields), but that lives in the `loom-logg` skill.
 
 ## How to search
 
@@ -42,7 +42,12 @@ loom mail sent --since 2w --json                   # emails you sent
 loom confluence pages --since 30d --json           # pages you edited
 loom calendar events --since 1w --json
 loom tempo worklogs --since 1w --json
+loom tempo accounts --search tjenestelag --json    # find a Tempo billing account
 ```
+
+> Search/read only. Writing (worklogs, setting a ticket's Account, and the
+> `jira` write actions) lives in the `loom-logg` skill — use that when Simon
+> wants to *change* something.
 
 Useful flags: `--since 7d|24h|2w|YYYY-MM-DD`, `--until YYYY-MM-DD`, `--json`
 (default for agents), `--ndjson`. Jira takes `--jql "..."` for a precise query

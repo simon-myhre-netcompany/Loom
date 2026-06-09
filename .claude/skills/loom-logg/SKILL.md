@@ -9,15 +9,22 @@ description: Use Loom (the `loom` CLI) to search Simon's recent work history acr
 **built for an AI (you) to drive** — so you can pull his real work history
 yourself instead of him copy-pasting it. Apps it integrates:
 
-- **tempo** — logged hours. **Read and write** (you can create worklogs).
-- **jira** — issues he works on + comments he posted (incl. `#TIL_KUNDE`).
+- **tempo** — logged hours. **Read and write**: create worklogs (`tempo log`),
+  list billing accounts (`tempo accounts`), and set an issue's Account
+  (`tempo set-account`).
+- **jira** — issues + comments (his, or **everyone's** with `--all`). Also
+  **guarded writes**: `comment`, `transition` (status), `describe`, `estimate`,
+  `assign`, `rename`, `labels`, `set` (priority/due).
 - **confluence** — pages he edited, incl. his weekly-status page.
 - **github** — PRs & commits he authored (personal + oslo-kommune org).
 - **slack** — messages he sent across workspaces.
 - **mail** — Apple Mail messages he sent (Netcompany + Oslo kommune).
 - **calendar** — Apple Calendar meetings & events (local).
 
-Everything is **read-only except `tempo log`**, which writes a worklog.
+Most actions are read-only. The **write** actions are `tempo log`,
+`tempo set-account`, and the `jira` writes above. Every write previews the
+change and confirms first (`--dry-run` to preview, `--yes` to skip the prompt)
+and acts as Simon — **never write before he agrees.**
 
 ## Step 1 — always start by searching his history with Loom
 
@@ -70,6 +77,11 @@ before Simon agrees.** Flow:
    (`--issue` takes a Jira key or numeric id; `--date` defaults to today,
    `--start HH:mm` defaults to 09:00. Without `--yes` it asks to confirm.)
    Report each created worklog id back to him.
+
+   Worklogs are booked against the issue's **Tempo Account** (billing bucket).
+   If he needs to change which account an issue bills to, `loom tempo accounts
+   --search <text>` finds it and `loom tempo set-account --issue K --account
+   <key|id>` sets it (confirm first, same as any write).
 
 ## B) Draft his ukentlig status (read-only — he pastes it himself)
 
