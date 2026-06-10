@@ -168,8 +168,8 @@ is most of Loom's value and should work in a container as-is.
    succeed (the helper build is a no-op off macOS). The API connectors keep
    working — `loom` stays useful in the container.
 2. **Credentials stay env-var-first.** The env-var path (`.env`) is already
-   cross-platform; the planned macOS-Keychain migration is an *additional* Mac
-   convenience, never the only way in. A container just mounts `.env`.
+   cross-platform — it is the one credential mechanism on every platform.
+   A container just mounts `.env`.
 3. **Cross-platform substitutes for the local-app sources (optional, later).**
    Where a container truly needs calendar/mail, revisit **Microsoft Graph** for
    M365 calendar/mail behind the same `ActivityEvent` shape — acknowledging
@@ -205,8 +205,8 @@ Agreed to do later, captured so we don't lose them:
 
 ## Decisions
 
-- **Credentials:** start with **environment variables**; migrate to **macOS
-  Keychain** later (Apple developer account available on this device).
+- **Credentials:** **environment variables** (`.env`, gitignored) — the same
+  mechanism on every platform.
 - **Fetching:** **live, no cache** for now. Revisit if speed/offline ever hurts.
 
 ## Open questions
