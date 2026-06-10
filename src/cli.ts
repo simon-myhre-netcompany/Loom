@@ -59,6 +59,12 @@ async function main(): Promise<void> {
     return;
   }
 
+  // --- status: which connectors are usable right now (env + platform) -------
+  if (source === 'status') {
+    handleStatus(flags);
+    return;
+  }
+
   // --- pick a connector (interactively if none given) -----------------------
   let connector: ConnectorSpec | undefined;
   if (source) {
@@ -130,6 +136,31 @@ function handleGuide(source: string | undefined): void {
   } else {
     stdout.write(renderGuide(CONNECTORS) + '\n');
   }
+}
+
+// ---------------------------------------------------------------------------
+// status command — per-connector availability, no network calls
+// ---------------------------------------------------------------------------
+
+function handleStatus(flags: Record<string, string | boolean>): void {
+  const report = CONNECTORS.map((c) => ({ source: c.source, ...c.availability() }));
+  if (flags.json) {
+    stdout.write(JSON.stringify(report, null, 2) + '\n');
+    return;
+  }
+  const icon = { ready: '✅', unconfigured: '⚠️', disabled: '🚫' } as const;
+  const width = Math.max(...report.map((r) => r.source.length));
+  for (const r of report) {
+    stdout.write(
+      `${icon[r.state]} ${r.source.padEnd(width)}  ${r.state.padEnd(12)}  ${r.detail}\n`
+    );
+  }
+  const off = report.filter((r) => r.state !== 'ready').length;
+  stdout.write(
+    off === 0
+      ? '\nAll connectors ready.\n'
+      : `\n${report.length - off}/${report.length} ready. \`loom guide <source>\` explains the missing pieces.\n`
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -232,6 +263,7 @@ function printHelp(): void {
       '',
       'usage:',
       '  loom <source> <action> [flags]   fetch activity events',
+      '  loom status                      which connectors are usable here (env/platform)',
       '  loom guide [source]              how to obtain the credentials',
       '  loom keys [list|add|check]       credential expiry tracking',
       '  loom                             interactive menu (at a TTY)',

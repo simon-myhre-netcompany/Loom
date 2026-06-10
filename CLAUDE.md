@@ -67,6 +67,9 @@ scripts/loom-docker.sh tempo worklogs --since 7d --json --no-interactive
   `assign --to` accepts a name/email/`me`/`none`. All preview the change and
   confirm before writing (`--dry-run` to preview, `--yes` to skip the prompt);
   they act as the authenticated Atlassian user.
+- **`loom status`** — per-connector availability on this machine (required env
+  vars set? platform supported?). No network calls. Connectors are independent:
+  configure only what you use; the rest shows as unconfigured.
 - **`loom guide [source]`** — step-by-step on how to obtain each credential.
 - **`loom calendar events`** — dual backend: Apple Calendar (EventKit) on
   macOS; ICS feeds (`CALENDAR_ICS_URL`/`CALENDAR_ICS_URL_<NAME>`, `--ics` to
