@@ -69,3 +69,9 @@ thread regardless of date). Run `loom --help` (or
 - **Cite what you found** (`ref`, `url`) so Simon can click through.
 - If a connector errors (missing token, network), say so and use the sources
   that worked — don't invent results.
+- **If Loom doesn't work, do NOT bypass it** — never call the underlying APIs
+  (Jira/Tempo/Atlassian REST, GitHub, Slack, ...) directly with curl/fetch or
+  by reading tokens from `.env`. Stop, tell the user it does not work, and give the
+  probable cause (read the error: expired/missing token → `loom keys` /
+  `loom guide <source>`, network/VPN, a Loom bug, ...). Loom is the boundary
+  that keeps access guarded; going around it defeats that.

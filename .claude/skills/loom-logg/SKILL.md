@@ -15,6 +15,13 @@ yourself instead of him copy-pasting it. Apps it integrates:
 - **jira** — issues + comments (his, or **everyone's** with `--all`). Also
   **guarded writes**: `comment`, `transition` (status), `describe`, `estimate`,
   `assign`, `rename`, `labels`, `set` (priority/due).
+  **Closing/resolving a ticket**: the workflow requires extra screen fields —
+  pass `--resolution "Fixed"` and `--field "Løsningsmetode=<how it was solved>"`
+  on `transition` (`--field "Name=value"` is repeatable, sets any field on the
+  target transition's screen, and validates the value against Jira's allowed
+  list before sending). E.g.:
+  `loom jira transition --key UKESASADF-1960 --to Resolved --resolution Fixed
+  --field "Løsningsmetode=Konfig rettet i kong-terraform-config" --dry-run`
 - **confluence** — pages he edited, incl. his weekly-status page.
 - **github** — PRs & commits he authored (personal + oslo-kommune org).
 - **slack** — messages he sent across workspaces.
@@ -47,6 +54,14 @@ Flags: `--since 7d|24h|2w|YYYY-MM-DD`, `--until YYYY-MM-DD`, `--json`, `--ndjson
 Run `loom --help` to confirm what's wired up. If a connector errors (missing
 token, network), say so plainly and continue with the sources that worked —
 never fabricate history. Cite the events (`ref`, `url`) behind each claim.
+
+**If Loom doesn't work, do NOT bypass it** — never call the underlying APIs
+(Jira/Tempo/Atlassian REST, GitHub, Slack, ...) directly with curl/fetch or by
+reading tokens from `.env`. Stop, tell the user it does not work, and give the
+probable cause (read the error: expired/missing token → `loom keys` /
+`loom guide <source>`, network/VPN, a Loom bug, ...). This applies doubly to
+writes: Loom's preview/confirm guardrails are the whole point — a direct API
+call would skip them.
 
 Then help him with **one of two things**:
 
