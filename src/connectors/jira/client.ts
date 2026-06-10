@@ -231,11 +231,21 @@ export async function addComment(
   );
 }
 
+/** A field on a transition's screen (from expand=transitions.fields). */
+export interface TransitionFieldMeta {
+  name?: string;
+  required?: boolean;
+  schema?: { type?: string; custom?: string; system?: string };
+  allowedValues?: { value?: string; name?: string }[];
+}
+
 /** A status transition available from the issue's current status. */
 export interface JiraTransition {
   id: string;
   name: string;
   to?: { name?: string };
+  /** Screen fields keyed by field id (e.g. "resolution", "customfield_10068"). */
+  fields?: Record<string, TransitionFieldMeta>;
 }
 
 /** The transitions currently available on an issue (depends on its status). */
@@ -247,25 +257,32 @@ export async function getTransitions(
 ): Promise<JiraTransition[]> {
   const headers = { Authorization: basicAuthHeader(email, token) };
   const res = await fetchJson<{ transitions?: JiraTransition[] }>(
-    `${base}/rest/api/2/issue/${encodeURIComponent(key)}/transitions`,
+    `${base}/rest/api/2/issue/${encodeURIComponent(key)}/transitions?expand=transitions.fields`,
     { headers }
   );
   return res.transitions ?? [];
 }
 
-/** Apply a status transition by its id. Returns 204 (no body). */
+/**
+ * Apply a status transition by its id, optionally setting fields the
+ * transition screen requires (e.g. Resolution, Løsningsmetode). 204, no body.
+ */
 export async function transitionIssue(
   base: string,
   email: string,
   token: string,
   key: string,
-  transitionId: string
+  transitionId: string,
+  fields?: Record<string, unknown>
 ): Promise<void> {
   const headers = { Authorization: basicAuthHeader(email, token) };
   await fetchVoid(`${base}/rest/api/2/issue/${encodeURIComponent(key)}/transitions`, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ transition: { id: transitionId } }),
+    body: JSON.stringify({
+      transition: { id: transitionId },
+      ...(fields && Object.keys(fields).length ? { fields } : {}),
+    }),
   });
 }
 

@@ -26,6 +26,8 @@ import {
   DEFAULT_JIRA_BASE,
   type JiraIssue,
   type JiraComment,
+  type JiraTransition,
+  type TransitionFieldMeta,
 } from './client.js';
 
 const FIELDS = [
@@ -186,7 +188,15 @@ async function comment(argv: string[]): Promise<ActivityEvent[]> {
   return [commentToEvent(created, key, base)];
 }
 
-/** loom jira transition --key K --to "In Progress" [--dry-run] [--yes] */
+/**
+ * loom jira transition --key K --to "In Progress" [--dry-run] [--yes]
+ *   [--field "Name=value" ...] [--resolution "Fixed"]
+ *
+ * Some transition screens require extra fields (e.g. Resolution and
+ * Løsningsmetode when resolving). `--field` sets any field on the target
+ * transition's screen, by display name or field id, and may repeat.
+ * `--resolution X` is shorthand for `--field resolution=X`.
+ */
 async function transition(argv: string[]): Promise<ActivityEvent[]> {
   const { base, email, token, flags } = context(argv);
   const key = requireKey(flags, 'transition');
@@ -195,6 +205,15 @@ async function transition(argv: string[]): Promise<ActivityEvent[]> {
     'to',
     'transition: --to "<status>" is required (e.g. --to "In Progress")'
   );
+
+  // --field may repeat; parseFlags keeps only the last value, so scan argv.
+  const fieldArgs: string[] = [];
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i] === '--field' && argv[i + 1] !== undefined && !argv[i + 1].startsWith('-')) {
+      fieldArgs.push(argv[++i]);
+    }
+  }
+  if (typeof flags.resolution === 'string') fieldArgs.push(`resolution=${flags.resolution}`);
 
   const [detail, transitions] = await Promise.all([
     getIssueDetail(base, email, token, key),
@@ -211,9 +230,17 @@ async function transition(argv: string[]): Promise<ActivityEvent[]> {
     );
   }
   const newStatus = target.to?.name ?? target.name;
-  const plan =
+
+  const fields = buildTransitionFields(fieldArgs, target, key);
+  const fieldLines = Object.entries(fields).map(
+    ([fid, v]) =>
+      `  setting ${target.fields?.[fid]?.name ?? fid} = ${typeof v === 'object' && v !== null ? ((v as Record<string, string>).name ?? (v as Record<string, string>).value) : String(v)}`
+  );
+  const plan = [
     `About to move ${key} (${detail.summary ?? ''}) ` +
-    `from "${detail.status ?? '?'}" to "${newStatus}" (transition "${target.name}").`;
+      `from "${detail.status ?? '?'}" to "${newStatus}" (transition "${target.name}").`,
+    ...fieldLines,
+  ].join('\n');
 
   if (flags['dry-run']) {
     stderr.write(plan + '\n(dry-run — nothing was changed.)\n');
@@ -221,9 +248,61 @@ async function transition(argv: string[]): Promise<ActivityEvent[]> {
   }
   if (!(await confirmOrAbort(plan, flags))) return [];
 
-  await transitionIssue(base, email, token, key, target.id);
+  await transitionIssue(base, email, token, key, target.id, fields);
   stderr.write(`✅ ${key} → ${newStatus}.\n`);
   return [statusEvent(key, detail.status, newStatus, base)];
+}
+
+/**
+ * Resolve "Name=value" pairs against the transition screen's field metadata:
+ * match by display name or field id, and shape the value to what the field
+ * type expects (resolution/option fields take an object, text takes a string).
+ */
+function buildTransitionFields(
+  pairs: string[],
+  target: JiraTransition,
+  key: string
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  const meta = target.fields ?? {};
+  for (const pair of pairs) {
+    const eq = pair.indexOf('=');
+    if (eq <= 0) {
+      throw new Error(`transition: --field expects "Name=value", got "${pair}".`);
+    }
+    const name = pair.slice(0, eq).trim();
+    const value = pair.slice(eq + 1).trim();
+    const id = Object.keys(meta).find((fid) => eqi(fid, name) || eqi(meta[fid].name ?? '', name));
+    if (!id) {
+      const available = Object.entries(meta)
+        .map(([fid, f]) => `"${f.name ?? fid}"`)
+        .join(', ');
+      throw new Error(
+        `transition: field "${name}" is not on the "${target.name}" screen for ${key}. ` +
+          `Available there: ${available || '(none)'}.`
+      );
+    }
+    out[id] = shapeFieldValue(meta[id], name, value);
+  }
+  return out;
+}
+
+function shapeFieldValue(f: TransitionFieldMeta, name: string, value: string): unknown {
+  if (f.allowedValues?.length) {
+    const match = f.allowedValues.find((v) => eqi(v.value ?? v.name ?? '', value));
+    if (!match) {
+      const allowed = f.allowedValues.map((v) => v.value ?? v.name).join(', ');
+      throw new Error(`transition: "${value}" is not allowed for ${name}. Allowed: ${allowed}.`);
+    }
+    // Resolutions/selects are set by object; prefer the key the value came from.
+    return match.value !== undefined ? { value: match.value } : { name: match.name };
+  }
+  if (f.schema?.type === 'number') {
+    const n = Number(value);
+    if (isNaN(n)) throw new Error(`transition: ${name} expects a number, got "${value}".`);
+    return n;
+  }
+  return value;
 }
 
 /** loom jira describe --key K --body "..." [--dry-run] [--yes] */
