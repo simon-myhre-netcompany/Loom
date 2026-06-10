@@ -33,7 +33,28 @@ creates Tempo worklogs. It only ever writes under your own account (it refuses
 to run without `TEMPO_ACCOUNT_ID`) and confirms before posting. Other writes
 (posting comments, etc.) remain a later phase.
 
-## Setup
+## Get it
+
+**Download a prebuilt CLI instead of building it yourself:** every push to
+`main` runs the [build workflow](.github/workflows/build.yml), which publishes
+two pullable artifacts:
+
+- **CLI tarball** — repo page → **Actions** → latest *build* run → **Artifacts**
+  → `loom-cli` (contains `dist/` — run with `node dist/cli.js`, Node 18+).
+  Or from a terminal:
+
+  ```bash
+  gh run download --name loom-cli   # then: tar xzf loom-cli.tgz
+  ```
+
+- **Ubuntu container image** on GHCR:
+
+  ```bash
+  docker pull ghcr.io/<owner>/loom:latest
+  docker run --rm -v "$PWD/.env:/app/.env:ro" ghcr.io/<owner>/loom:latest tempo worklogs --since 7d --json
+  ```
+
+## Setup (building locally)
 
 ```bash
 npm install
@@ -42,8 +63,9 @@ npm link               # makes `loom` available globally on your PATH
 cp .env.example .env   # then fill in your tokens
 ```
 
-Credentials live in env vars for now (`.env` is gitignored); migrating to macOS
-Keychain later.
+Credentials live in env vars (`.env` is gitignored). `JIRA_BASE_URL` is
+**required** for the Jira/Confluence/Tempo connectors — Loom ships no default
+site; point it at your own, e.g. `JIRA_BASE_URL=https://your-site.atlassian.net`.
 
 ## Usage
 
@@ -127,6 +149,7 @@ On success it prints the created worklog's id and emits the event:
 ### Other commands
 
 ```bash
+loom status           # which connectors are usable here (env set? platform?)
 loom guide [source]   # how to obtain each credential (e.g. the Tempo token)
 loom keys             # list registered credentials + expiry
 loom keys check       # exit 1 if any key expires within 30 days

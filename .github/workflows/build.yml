@@ -1,0 +1,51 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  # Build the CLI on Ubuntu and publish it as a downloadable artifact.
+  # Pull it with:  gh run download --repo <owner>/Loom --name loom-cli
+  cli:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build # helper build is a no-op off macOS by design
+      # Everything needed to run `node dist/cli.js` on any Node 18+ box.
+      # No .env / credentials metadata — secrets and personal state stay local.
+      - run: tar czf loom-cli.tgz dist package.json README.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: loom-cli
+          path: loom-cli.tgz
+          retention-days: 30
+
+  # Build the Ubuntu container image and push it to GHCR.
+  # Pull it with:  docker pull ghcr.io/<owner>/loom:latest
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push
+        run: |
+          IMAGE="ghcr.io/$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/loom"
+          docker build -t "$IMAGE:latest" -t "$IMAGE:${GITHUB_SHA::7}" .
+          docker push "$IMAGE:latest"
+          docker push "$IMAGE:${GITHUB_SHA::7}"
