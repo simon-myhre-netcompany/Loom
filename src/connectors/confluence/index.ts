@@ -9,8 +9,8 @@
 import type { ActivityEvent } from '../../types.js';
 import { flagOrEnv, parseFlags } from '../../util/args.js';
 import { parseSince, toDateString } from '../../util/time.js';
-import { resolveAtlassianAuth } from '../../util/atlassian.js';
-import { searchContent, DEFAULT_CONFLUENCE_BASE, type ConfluenceContent } from './client.js';
+import { resolveAtlassianAuth, requireConfluenceBase } from '../../util/atlassian.js';
+import { searchContent, type ConfluenceContent } from './client.js';
 
 export async function run(action: string | undefined, argv: string[]): Promise<ActivityEvent[]> {
   switch (action) {
@@ -25,7 +25,7 @@ export async function run(action: string | undefined, argv: string[]): Promise<A
 async function pages(argv: string[]): Promise<ActivityEvent[]> {
   const flags = parseFlags(argv);
 
-  const base = flagOrEnv(flags, 'base', 'CONFLUENCE_BASE_URL', DEFAULT_CONFLUENCE_BASE)!;
+  const base = requireConfluenceBase(flags);
   const auth = resolveAtlassianAuth(flags);
   if (!auth) {
     throw new Error(

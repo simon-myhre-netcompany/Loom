@@ -6,7 +6,6 @@
 import { fetchJson, fetchVoid } from '../../util/http.js';
 import { basicAuthHeader } from '../../util/atlassian.js';
 
-export const DEFAULT_JIRA_BASE = 'https://oslo-kommune.atlassian.net';
 
 export interface JiraIssue {
   key: string;

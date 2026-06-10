@@ -35,6 +35,17 @@ interface RawMail {
 
 type Box = 'sent' | 'inbox';
 
+/** Is this connector usable right now on this machine? (for `loom status`) */
+export function availability(): { state: 'ready' | 'unconfigured' | 'disabled'; detail: string } {
+  if (process.platform !== 'darwin') {
+    return { state: 'disabled', detail: 'macOS-only (reads Apple Mail) — disabled on this platform' };
+  }
+  if (!existsSync(HELPER)) {
+    return { state: 'unconfigured', detail: 'helper missing — run `npm run build`' };
+  }
+  return { state: 'ready', detail: 'Apple Mail via Mail.app' };
+}
+
 export async function run(action: string | undefined, argv: string[]): Promise<ActivityEvent[]> {
   switch (action) {
     case 'sent':

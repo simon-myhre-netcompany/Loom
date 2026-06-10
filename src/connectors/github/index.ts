@@ -5,7 +5,7 @@
  *   loom github commits [--since 7d] [--until YYYY-MM-DD]
  *
  * Reads every GITHUB_TOKEN / GITHUB_TOKEN_* env var (one per resource owner,
- * e.g. personal + oslo-kommune), queries each, and merges/dedupes the results.
+ * e.g. personal + a work org), queries each, and merges/dedupes the results.
  */
 import type { ActivityEvent } from '../../types.js';
 import { parseFlags } from '../../util/args.js';
@@ -113,7 +113,7 @@ function collectTokens(flags: Record<string, string | boolean>): NamedToken[] {
   return out;
 }
 
-/** "https://api.github.com/repos/oslo-kommune/foo" -> "oslo-kommune/foo". */
+/** "https://api.github.com/repos/acme/foo" -> "acme/foo". */
 function repoFromApiUrl(url: string): string {
   const m = url.match(/\/repos\/(.+)$/);
   return m ? m[1] : url;

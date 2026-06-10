@@ -5,7 +5,6 @@
 import { fetchJson } from '../../util/http.js';
 import { basicAuthHeader } from '../../util/atlassian.js';
 
-export const DEFAULT_CONFLUENCE_BASE = 'https://oslo-kommune.atlassian.net/wiki';
 
 export interface ConfluenceContent {
   id: string;

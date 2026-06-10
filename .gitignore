@@ -5,3 +5,4 @@ bin/
 .env.local
 *.log
 .DS_Store
+credentials.json

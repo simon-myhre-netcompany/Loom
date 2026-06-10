@@ -6,7 +6,7 @@
 
 ## The problem (motivation)
 
-As a consultant placed at Oslo kommune via Netcompany, the record of what I
+As a consultant placed at a client via a consultancy, the record of what I
 actually do is scattered across many systems, in many formats:
 
 - **Weekly status** — written by hand in a Confluence page.
@@ -15,8 +15,8 @@ actually do is scattered across many systems, in many formats:
   keeping progress/estimates current.
 - **Tempo (in Jira)** — time tracking. Rules: **max 2.5 hours per entry**; if I
   work longer on one task I must split it into multiple entries. Tempo must be
-  submitted **monthly** (this is the Oslo kommune side).
-- **Netcompany timereg** (`timereg.netcompany.com`) — Netcompany's own time
+  submitted **monthly** (this is the client side).
+- **Consultancy timereg** — the consultancy's own time
   registration. I sync Tempo hours into it (today via my **JTI** Chrome
   extension), **submit weekly**, and **close monthly**.
 - **Slack & Teams** — where I communicate and inform people.
@@ -80,7 +80,7 @@ merged stream.
 
 - **Read-only is an architectural boundary, not just discipline.** v1
   connectors have **no write code paths and no write credentials**. This keeps
-  kommune/customer-data risk low while we earn trust.
+  customer-data risk low while we earn trust.
 - **One source at a time.** Auth is the hard part and differs per source — some
   may be impractical. We ship value incrementally and never block on the
   hardest connector.
@@ -123,7 +123,7 @@ Once reads are trustworthy, extend connectors to **apply** changes:
 
 - **Tempo** — create worklogs, **including the 2.5h split logic** (net-new; JTI
   does *not* do this — it registers hours as-is, summed by day+account).
-- **Netcompany timereg** — `RegisterTime`, weekly submit, monthly close. Note:
+- **Consultancy timereg** — `RegisterTime`, weekly submit, monthly close. Note:
   JTI authenticates to timereg via **browser session cookies**, which does not
   translate cleanly to a headless CLI — solving timereg auth for a CLI is a
   known open problem to tackle in this phase.
@@ -190,9 +190,9 @@ Agreed to do later, captured so we don't lose them:
   Graph CLI client is locked to assigned users + Conditional Access
   (AADSTS50105 / 53003). Needs IT to assign app access or register an app with
   delegated `Chat.Read` + admin consent. Calendar already covers the *meeting*
-  side; chat would be the only addition. Note: no Netcompany Slack, only Teams.
-- **Second Slack workspace** — only if a non-Oslo Slack ever appears (today the
-  Oslo kommune workspace is the only Slack).
+  side; chat would be the only addition. Note: one tenant has no Slack, only Teams.
+- **Second Slack workspace** — only if another workspace ever appears (today
+  there is a single Slack workspace).
 - **Azure DevOps / local git** — easy PAT/zero-auth wins if code/work items live
   outside GitHub.
 

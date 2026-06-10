@@ -40,7 +40,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certifi
 
 WORKDIR /app
 COPY --from=build /app/dist ./dist
-COPY package.json credentials.json ./
+COPY package.json ./
+# credentials.json (expiry metadata, no secrets) is personal/local — the
+# loom-docker.sh wrapper mounts it at runtime when present.
 
 # `loom` on PATH, as documented in GOAL.md Phase 3.
 RUN printf '#!/bin/sh\nexec node /app/dist/cli.js "$@"\n' > /usr/local/bin/loom \

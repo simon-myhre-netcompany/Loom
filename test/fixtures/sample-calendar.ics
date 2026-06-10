@@ -19,16 +19,16 @@ END:DAYLIGHT
 END:VTIMEZONE
 BEGIN:VEVENT
 UID:standup-weekly-001
-SUMMARY:Daglig standup\, SOT-teamet
+SUMMARY:Daglig standup\, teamet
 LOCATION:Teams
 DESCRIPTION:Standup for teamet.\nKort og godt.
 DTSTART;TZID=W. Europe Standard Time:20260401T091500
 DTEND;TZID=W. Europe Standard Time:20260401T093000
 RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR
 EXDATE;TZID=W. Europe Standard Time:20260608T091500
-ORGANIZER;CN=Simon Myhre:mailto:simon.myhre@drift.oslo.kommune.no
-ATTENDEE;CN=Kollega En:mailto:en@oslo.kommune.no
-ATTENDEE;CN=Kollega To:mailto:to@oslo.kommune.no
+ORGANIZER;CN=Ola Nordmann:mailto:ola.nordmann@example.com
+ATTENDEE;CN=Kollega En:mailto:en@example.com
+ATTENDEE;CN=Kollega To:mailto:to@example.com
 STATUS:CONFIRMED
 BEGIN:VALARM
 TRIGGER:-PT15M

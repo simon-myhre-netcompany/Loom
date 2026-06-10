@@ -4,7 +4,7 @@
  * "published calendar" link) and normalizes VEVENTs into ActivityEvents.
  *
  * Feeds come from env vars: CALENDAR_ICS_URL and/or CALENDAR_ICS_URL_<NAME>
- * (e.g. CALENDAR_ICS_URL_OSLO). Values may be https URLs or local file paths.
+ * (e.g. CALENDAR_ICS_URL_WORK). Values may be https URLs or local file paths.
  * NOTE: a published-calendar URL is a capability URL — anyone with it can read
  * the calendar. Treat it like a token: keep it in .env, never commit it.
  *

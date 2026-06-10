@@ -40,6 +40,24 @@ interface RawEvent {
   status: number;
 }
 
+/** Is this connector usable right now on this machine? (for `loom status`) */
+export function availability(): { state: 'ready' | 'unconfigured' | 'disabled'; detail: string } {
+  if (process.platform === 'darwin' && existsSync(HELPER)) {
+    return { state: 'ready', detail: 'Apple Calendar via EventKit' };
+  }
+  const feeds = icsFeeds();
+  if (feeds.length > 0) {
+    return { state: 'ready', detail: `ICS feeds: ${feeds.map((f) => f.name).join(', ')}` };
+  }
+  return {
+    state: 'unconfigured',
+    detail:
+      process.platform === 'darwin'
+        ? 'run `npm run build` (EventKit helper) or set CALENDAR_ICS_URL'
+        : 'set CALENDAR_ICS_URL (EventKit is macOS-only)',
+  };
+}
+
 export async function run(action: string | undefined, argv: string[]): Promise<ActivityEvent[]> {
   switch (action) {
     case 'events':

@@ -12,12 +12,11 @@ import { stderr, stdin, stdout } from 'node:process';
 import type { ActivityEvent } from '../../types.js';
 import { flagOrEnv, parseFlags } from '../../util/args.js';
 import { parseSince, parseDateOnly, toDateString } from '../../util/time.js';
-import { resolveAtlassianAuth } from '../../util/atlassian.js';
+import { resolveAtlassianAuth, requireJiraBase } from '../../util/atlassian.js';
 import {
   getIssueRef,
   getIssueFieldValue,
   updateIssueFields,
-  DEFAULT_JIRA_BASE,
 } from '../jira/client.js';
 import { confirm } from '../../interactive.js';
 import {
@@ -204,7 +203,7 @@ async function accounts(argv: string[]): Promise<ActivityEvent[]> {
 async function setAccount(argv: string[]): Promise<ActivityEvent[]> {
   const flags = parseFlags(argv);
 
-  const base = flagOrEnv(flags, 'base', 'JIRA_BASE_URL', DEFAULT_JIRA_BASE)!;
+  const base = requireJiraBase(flags);
   const auth = resolveAtlassianAuth(flags);
   if (!auth) {
     throw new Error(
@@ -333,7 +332,7 @@ async function resolveIssue(
   if (/^\d+$/.test(issueArg)) {
     return { issueId: Number(issueArg), issueLabel: `issue ${issueArg}` };
   }
-  const base = flagOrEnv(flags, 'base', 'JIRA_BASE_URL', DEFAULT_JIRA_BASE)!;
+  const base = requireJiraBase(flags);
   const auth = resolveAtlassianAuth(flags);
   if (!auth) {
     throw new Error(

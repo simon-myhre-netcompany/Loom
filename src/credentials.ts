@@ -5,7 +5,8 @@
  * only *metadata* — which env vars we expect and when each one expires — so we
  * can answer "does any API key expire soon?" without ever storing the secret.
  *
- * Stored in credentials.json at the project root (safe to commit: no secrets).
+ * Stored in credentials.json at the project root. It holds no secrets, but it
+ * is personal state (which tokens you have, when they expire) — gitignored.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';

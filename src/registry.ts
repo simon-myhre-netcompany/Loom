@@ -34,6 +34,12 @@ export interface CredentialGuide {
   steps: string[];
 }
 
+/** Whether a connector can run right now, and why/why not (for `loom status`). */
+export interface Availability {
+  state: 'ready' | 'unconfigured' | 'disabled';
+  detail: string;
+}
+
 export interface ConnectorSpec {
   source: string;
   description: string;
@@ -41,11 +47,40 @@ export interface ConnectorSpec {
   actions: ActionSpec[];
   /** Step-by-step instructions for getting each credential this connector needs. */
   setup: CredentialGuide[];
+  /** Env/platform check — never touches the network. */
+  availability: () => Availability;
 }
+
+const envSet = (...names: string[]): string[] => names.filter((n) => !process.env[n]);
+
+/** True when VAR or any VAR_<SUFFIX> is set (the multi-account pattern). */
+const envFamily = (prefix: string): boolean =>
+  Object.entries(process.env).some(
+    ([k, v]) => !!v && (k === prefix || k.startsWith(`${prefix}_`))
+  );
+
+const need = (...names: string[]): Availability => {
+  const missing = envSet(...names);
+  return missing.length === 0
+    ? { state: 'ready', detail: 'credentials present' }
+    : { state: 'unconfigured', detail: `set ${missing.join(', ')} in .env` };
+};
+
+const atlassian = (): Availability => {
+  const missing = [
+    ...(process.env.ATLASSIAN_EMAIL ?? process.env.JIRA_EMAIL ? [] : ['ATLASSIAN_EMAIL']),
+    ...(process.env.ATLASSIAN_API_TOKEN ?? process.env.JIRA_API_TOKEN ? [] : ['ATLASSIAN_API_TOKEN']),
+    ...(process.env.JIRA_BASE_URL ? [] : ['JIRA_BASE_URL']),
+  ];
+  return missing.length === 0
+    ? { state: 'ready', detail: 'credentials present' }
+    : { state: 'unconfigured', detail: `set ${missing.join(', ')} in .env` };
+};
 
 export const CONNECTORS: ConnectorSpec[] = [
   {
     source: 'tempo',
+    availability: () => need('TEMPO_API_TOKEN'),
     description: 'Tempo worklogs (read) + log time and set an issue\'s Account (write)',
     run: tempo.run,
     actions: [
@@ -121,6 +156,9 @@ export const CONNECTORS: ConnectorSpec[] = [
   },
   {
     source: 'github',
+    availability: () => envFamily('GITHUB_TOKEN')
+      ? { state: 'ready', detail: 'credentials present' }
+      : { state: 'unconfigured', detail: 'set GITHUB_TOKEN_<NAME> in .env' },
     description: 'GitHub PRs & commits you authored (across accounts/orgs)',
     run: github.run,
     actions: [
@@ -160,20 +198,18 @@ export const CONNECTORS: ConnectorSpec[] = [
         ],
       },
       {
-        env: 'GITHUB_TOKEN_OSLO',
+        env: 'GITHUB_TOKEN_<ORG>',
         required: false,
         steps: [
-          'A SECOND fine-grained PAT, Resource owner = Oslo kommune org, so it',
-          '  can see the org repos you work on.',
-          'Go to https://github.com/oslokommune-uke → profile picture →',
-          '  Settings → Developer settings → Personal access tokens →',
-          '  Fine-grained tokens → Generate new token (log in if prompted).',
-          'Token name: LOOM. Resource owner: Oslo kommune.',
+          'A SECOND fine-grained PAT per organization you work in, so it can',
+          '  see the org repos (a fine-grained PAT is locked to one owner).',
+          'Same flow as above, but set Resource owner to the organization.',
           'Repository access: All repositories.',
           'Permissions — Add permissions, set all of these to READ:',
           '  Contents, Discussions, Issues, Metadata, Pull requests.',
           'Note: org tokens may need an admin to approve them before they work.',
-          'Set GITHUB_TOKEN_OSLO in .env and register its expiry as above.',
+          'Set GITHUB_TOKEN_<ORG> (e.g. GITHUB_TOKEN_WORK) in .env and',
+          'register its expiry as above.',
           'Loom reads every GITHUB_TOKEN / GITHUB_TOKEN_* var and merges them,',
           'so add as many orgs as you like with more GITHUB_TOKEN_<NAME> vars.',
         ],
@@ -182,6 +218,7 @@ export const CONNECTORS: ConnectorSpec[] = [
   },
   {
     source: 'calendar',
+    availability: () => calendar.availability(),
     description: 'Calendar events (macOS: Apple Calendar/EventKit; Linux: ICS feed URLs)',
     run: calendar.run,
     actions: [
@@ -204,8 +241,7 @@ export const CONNECTORS: ConnectorSpec[] = [
           '',
           '1. Get your calendars INTO Apple Calendar (Calendar.app):',
           '   System Settings → Internet Accounts → Add Account.',
-          '   - Netcompany mail/calendar: add it (Microsoft Exchange / 365).',
-          '   - Oslo kommune mail/calendar: add it (Microsoft Exchange / 365).',
+          '   Add each work/personal account (Microsoft Exchange / 365, ...).',
           '   Enable "Calendars" for each account. They now sync into Calendar.app.',
           '',
           '2. Build the helper (needs Xcode command line tools / swiftc):',
@@ -233,8 +269,8 @@ export const CONNECTORS: ConnectorSpec[] = [
           '   Pick the calendar, permission "Can view all details", Publish.',
           '   Copy the ICS link.',
           '2. Set it in .env as CALENDAR_ICS_URL. More calendars: add',
-          '   CALENDAR_ICS_URL_<NAME> vars (e.g. CALENDAR_ICS_URL_OSLO,',
-          '   CALENDAR_ICS_URL_NETCOMPANY) — Loom reads and merges them all.',
+          '   CALENDAR_ICS_URL_<NAME> vars (e.g. CALENDAR_ICS_URL_WORK)',
+          '   — Loom reads and merges them all.',
           '   A local .ics file path also works (offline exports/tests).',
           '',
           'SECURITY: the published URL is a capability URL — anyone holding it',
@@ -250,6 +286,7 @@ export const CONNECTORS: ConnectorSpec[] = [
   },
   {
     source: 'jira',
+    availability: () => atlassian(),
     description: 'Jira issues you work on (read) + guarded writes (comment, status, ...)',
     run: jira.run,
     actions: [
@@ -363,22 +400,22 @@ export const CONNECTORS: ConnectorSpec[] = [
         required: true,
         steps: [
           'The email of your Atlassian account (the Basic-auth username).',
-          'For Oslo kommune that is simon.myhre@drift.oslo.kommune.no.',
           'Set ATLASSIAN_EMAIL in .env.',
         ],
       },
       {
         env: 'JIRA_BASE_URL',
-        required: false,
+        required: true,
         steps: [
-          'Your Jira site URL. Defaults to https://oslo-kommune.atlassian.net,',
-          'so you only need to set JIRA_BASE_URL for a different site.',
+          'Your Jira site URL, e.g. https://your-site.atlassian.net.',
+          'Required — Loom ships no default site. Set JIRA_BASE_URL in .env.',
         ],
       },
     ],
   },
   {
     source: 'confluence',
+    availability: () => atlassian(),
     description: 'Confluence pages you edited (weekly status, recent edits)',
     run: confluence.run,
     actions: [
@@ -399,14 +436,16 @@ export const CONNECTORS: ConnectorSpec[] = [
           'Confluence uses the SAME Atlassian token as Jira — if you set up Jira,',
           '  you are already done. See `loom guide jira`.',
           'Needs ATLASSIAN_EMAIL + ATLASSIAN_API_TOKEN in .env.',
-          'Optional: CONFLUENCE_BASE_URL (defaults to',
-          '  https://oslo-kommune.atlassian.net/wiki).',
+          'Optional: CONFLUENCE_BASE_URL (defaults to JIRA_BASE_URL + /wiki).',
         ],
       },
     ],
   },
   {
     source: 'slack',
+    availability: () => envFamily('SLACK_TOKEN')
+      ? { state: 'ready', detail: 'credentials present' }
+      : { state: 'unconfigured', detail: 'set SLACK_TOKEN_<WORKSPACE> in .env' },
     description: 'Slack messages you sent (across workspaces)',
     run: slack.run,
     actions: [
@@ -438,7 +477,8 @@ export const CONNECTORS: ConnectorSpec[] = [
           '   - "Request to Install" → needs an admin; ask IT or try another',
           '     workspace where you can self-serve.',
           '5. Copy the "User OAuth Token" (starts with xoxp-).',
-          '6. Set it in .env as SLACK_TOKEN_OSLO (or _NETCOMPANY, etc.) — Loom',
+          '6. Set it in .env as SLACK_TOKEN_<WORKSPACE> (e.g. SLACK_TOKEN_WORK)',
+          '   — Loom',
           '   reads every SLACK_TOKEN / SLACK_TOKEN_* var and merges workspaces.',
           '',
           'Note: search.messages must be enabled for the workspace (it is on most',
@@ -449,6 +489,7 @@ export const CONNECTORS: ConnectorSpec[] = [
   },
   {
     source: 'mail',
+    availability: () => mail.availability(),
     description: 'Apple Mail messages (macOS-only — disabled on Linux)',
     run: mail.run,
     actions: [
@@ -477,8 +518,8 @@ export const CONNECTORS: ConnectorSpec[] = [
           'Apple Mail is read locally via Mail.app scripting. No tokens.',
           '',
           '1. Add your accounts to Apple Mail (Mail.app):',
-          '   System Settings → Internet Accounts → add your Netcompany and',
-          '   Oslo kommune mail (Microsoft Exchange / 365). Enable "Mail".',
+          '   System Settings → Internet Accounts → add your mail accounts',
+          '   (Microsoft Exchange / 365, ...). Enable "Mail".',
           '',
           '2. Grant Automation permission (one time):',
           '   Run `loom mail sent` once. macOS prompts "<terminal> wants to',

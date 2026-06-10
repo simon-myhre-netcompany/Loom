@@ -10,7 +10,7 @@ import { stderr, stdin, stdout } from 'node:process';
 import type { ActivityEvent } from '../../types.js';
 import { flagOrEnv, parseFlags } from '../../util/args.js';
 import { parseSince, toDateString } from '../../util/time.js';
-import { resolveAtlassianAuth } from '../../util/atlassian.js';
+import { resolveAtlassianAuth, requireJiraBase } from '../../util/atlassian.js';
 import { confirm } from '../../interactive.js';
 import {
   searchIssues,
@@ -23,7 +23,6 @@ import {
   getTransitions,
   transitionIssue,
   updateIssueFields,
-  DEFAULT_JIRA_BASE,
   type JiraIssue,
   type JiraComment,
   type JiraTransition,
@@ -84,12 +83,12 @@ interface Ctx {
 /** Resolve base + credentials + date range shared by all actions. */
 function context(argv: string[]): Ctx {
   const flags = parseFlags(argv);
-  const base = flagOrEnv(flags, 'base', 'JIRA_BASE_URL', DEFAULT_JIRA_BASE)!;
+  const base = requireJiraBase(flags);
   const auth = resolveAtlassianAuth(flags);
   if (!auth) {
     throw new Error(
       'Missing Atlassian credentials. Set ATLASSIAN_EMAIL and ATLASSIAN_API_TOKEN ' +
-        '(and optionally JIRA_BASE_URL). Run `loom guide jira` for how to get them.'
+        '(plus JIRA_BASE_URL). Run `loom guide jira` for how to get them.'
     );
   }
   const sinceStr = typeof flags.since === 'string' ? flags.since : '7d';
