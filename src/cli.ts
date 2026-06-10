@@ -22,6 +22,8 @@ import {
   statusReport,
   upsertEntry,
   setEnvSecret,
+  parseEnvText,
+  importEnvSecrets,
   type CredentialEntry,
 } from './credentials.js';
 import { parseFlags } from './util/args.js';
@@ -178,6 +180,11 @@ async function handleKeys(
     return;
   }
 
+  if (sub === 'import') {
+    keysImport(flags);
+    return;
+  }
+
   // list / check (default = list)
   const onlySoon = sub === 'check' || !!flags.soon;
   let report = statusReport();
@@ -248,6 +255,45 @@ async function keysAdd(
   stdout.write(renderCredentials(statusReport()) + '\n');
 }
 
+/**
+ * loom keys import --file <path> [--dry-run]
+ * Merge every var from an env-format file into the project's .env.
+ * Expected format: one NAME=VALUE per line; `#` comments and blank lines are
+ * ignored; the value is everything after the first `=` (verbatim — no quotes,
+ * no `export` prefix, no multi-line values).
+ */
+function keysImport(flags: Record<string, string | boolean>): void {
+  const file = typeof flags.file === 'string' ? flags.file : undefined;
+  if (!file) {
+    fail(
+      'keys import: --file <path> is required.\n' +
+        'File format: one NAME=VALUE per line, # comments and blank lines ignored,\n' +
+        'value taken verbatim after the first "=" (no quotes, no "export" prefix).'
+    );
+  }
+  let text: string;
+  try {
+    text = readFileSync(file!, 'utf8');
+  } catch (err) {
+    fail(`keys import: cannot read "${file}": ${(err as Error).message}`);
+  }
+  const pairs = parseEnvText(text!);
+  const names = Object.keys(pairs);
+  if (names.length === 0) {
+    fail(
+      `keys import: no NAME=VALUE lines found in "${file}". ` +
+        'Expected one NAME=VALUE per line (# comments and blanks are ignored).'
+    );
+  }
+  if (flags['dry-run']) {
+    stdout.write(`Would import ${names.length} var(s) into .env:\n  ${names.join('\n  ')}\n`);
+    return;
+  }
+  const path = importEnvSecrets(pairs);
+  stdout.write(`Imported ${names.length} var(s) into ${path}:\n  ${names.join('\n  ')}\n`);
+  stdout.write(renderCredentials(statusReport()) + '\n');
+}
+
 function parseExpires(raw: string | undefined): string | null {
   if (!raw || raw.toLowerCase() === 'never' || raw === '-') return null;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
@@ -311,8 +357,16 @@ function printHelp(): void {
       '  loom keys add --env X --expires YYYY-MM-DD [--label .. --source ..]',
       '                            also stores the secret in .env: prompts',
       '                            hidden at a TTY, or pipe it with --value-stdin',
+      '  loom keys import --file F [--dry-run]',
+      '                            merge a whole env-format file into .env',
+      '                            (one NAME=VALUE per line; # comments ignored;',
+      '                            value verbatim after the first "=" — no quotes,',
+      '                            no "export" prefix)',
       '',
-      'credentials come from environment variables (see .env.example).',
+      'credentials come from environment variables. Three ways to provide them:',
+      '  1. write .env yourself at setup (copy .env.example and fill in),',
+      '  2. per key:    loom keys add --env NAME --expires DATE',
+      '  3. bulk:       loom keys import --file my-secrets.env',
     ].join('\n') + '\n'
   );
 }

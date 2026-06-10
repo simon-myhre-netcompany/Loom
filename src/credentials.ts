@@ -39,11 +39,32 @@ const REGISTRY_PATH = fileURLToPath(new URL('../credentials.json', import.meta.u
 const ENV_PATH = fileURLToPath(new URL('../.env', import.meta.url));
 
 /**
- * Store NAME=value in the project's .env — created 0600 if missing, the
- * existing NAME= line replaced if present, everything else left untouched.
+ * Parse env-file text into name/value pairs. The format (same one the CLI
+ * loads at startup): one NAME=VALUE per line; `#` comments and blank lines
+ * ignored; the value is everything after the FIRST `=`, taken verbatim after
+ * trimming — no quote stripping, no `export` prefix, no multi-line values.
+ */
+export function parseEnvText(text: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const line of text.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eq = trimmed.indexOf('=');
+    if (eq <= 0) continue;
+    const key = trimmed.slice(0, eq).trim();
+    const value = trimmed.slice(eq + 1).trim();
+    if (key) out[key] = value;
+  }
+  return out;
+}
+
+/**
+ * Merge every NAME=VALUE from `pairs` into the project's .env in one write —
+ * existing NAME= lines replaced in place, new ones appended, everything else
+ * (comments, unrelated vars) left untouched. Created 0600 when missing.
  * Returns the path written. Also updates process.env for this run.
  */
-export function setEnvSecret(name: string, value: string): string {
+export function importEnvSecrets(pairs: Record<string, string>): string {
   let text = '';
   try {
     text = readFileSync(ENV_PATH, 'utf8');
@@ -51,12 +72,22 @@ export function setEnvSecret(name: string, value: string): string {
     /* no .env yet — we'll create it */
   }
   const lines = text.length ? text.replace(/\n$/, '').split('\n') : [];
-  const idx = lines.findIndex((l) => l.trimStart().startsWith(`${name}=`));
-  if (idx >= 0) lines[idx] = `${name}=${value}`;
-  else lines.push(`${name}=${value}`);
+  for (const [name, value] of Object.entries(pairs)) {
+    const idx = lines.findIndex((l) => l.trimStart().startsWith(`${name}=`));
+    if (idx >= 0) lines[idx] = `${name}=${value}`;
+    else lines.push(`${name}=${value}`);
+    process.env[name] = value;
+  }
   writeFileSync(ENV_PATH, lines.join('\n') + '\n', { mode: 0o600 });
-  process.env[name] = value;
   return ENV_PATH;
+}
+
+/**
+ * Store one NAME=value in the project's .env (see importEnvSecrets).
+ * Returns the path written.
+ */
+export function setEnvSecret(name: string, value: string): string {
+  return importEnvSecrets({ [name]: value });
 }
 
 interface RegistryFile {

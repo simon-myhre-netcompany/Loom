@@ -67,6 +67,17 @@ Credentials live in env vars (`.env` is gitignored). `JIRA_BASE_URL` is
 **required** for the Jira/Confluence/Tempo connectors — Loom ships no default
 site; point it at your own, e.g. `JIRA_BASE_URL=https://your-site.atlassian.net`.
 
+Three ways to provide credentials:
+
+1. **At setup:** `cp .env.example .env` and fill it in by hand.
+2. **Per key:** `loom keys add --env TEMPO_API_TOKEN --expires 2027-01-01` —
+   prompts for the secret with hidden input (or pipe it via `--value-stdin`)
+   and writes `.env` for you, plus registers the expiry.
+3. **Bulk:** `loom keys import --file my-secrets.env` — merges a whole
+   env-format file into `.env`. Format: one `NAME=VALUE` per line, `#` comments
+   and blank lines ignored, the value is taken verbatim after the first `=`
+   (no quotes, no `export` prefix, no multi-line values).
+
 ## Usage
 
 Once linked, call `loom` directly from anywhere — it finds the project `.env`
@@ -151,6 +162,7 @@ On success it prints the created worklog's id and emits the event:
 ```bash
 loom status           # which connectors are usable here (env set? platform?)
 loom guide [source]   # how to obtain each credential (e.g. the Tempo token)
+loom keys import --file my.env   # merge a whole env-format file into .env
 loom keys             # list registered credentials + expiry
 loom keys check       # exit 1 if any key expires within 30 days
 loom keys add --env JIRA_API_TOKEN --expires 2027-06-05 --label "..." --source jira
