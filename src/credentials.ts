@@ -36,6 +36,28 @@ export interface CredentialStatus extends CredentialEntry {
 export const SOON_DAYS = 30;
 
 const REGISTRY_PATH = fileURLToPath(new URL('../credentials.json', import.meta.url));
+const ENV_PATH = fileURLToPath(new URL('../.env', import.meta.url));
+
+/**
+ * Store NAME=value in the project's .env — created 0600 if missing, the
+ * existing NAME= line replaced if present, everything else left untouched.
+ * Returns the path written. Also updates process.env for this run.
+ */
+export function setEnvSecret(name: string, value: string): string {
+  let text = '';
+  try {
+    text = readFileSync(ENV_PATH, 'utf8');
+  } catch {
+    /* no .env yet — we'll create it */
+  }
+  const lines = text.length ? text.replace(/\n$/, '').split('\n') : [];
+  const idx = lines.findIndex((l) => l.trimStart().startsWith(`${name}=`));
+  if (idx >= 0) lines[idx] = `${name}=${value}`;
+  else lines.push(`${name}=${value}`);
+  writeFileSync(ENV_PATH, lines.join('\n') + '\n', { mode: 0o600 });
+  process.env[name] = value;
+  return ENV_PATH;
+}
 
 interface RegistryFile {
   credentials: CredentialEntry[];

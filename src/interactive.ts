@@ -63,6 +63,31 @@ export async function ask(question: string, def?: string): Promise<string> {
 }
 
 /**
+ * Free-text prompt with terminal echo suppressed — for secrets. Uses raw mode
+ * so nothing is shown while typing/pasting; backspace is honoured. Over a pipe
+ * (no TTY) it just reads the next line.
+ */
+export async function askHidden(question: string): Promise<string> {
+  stdout.write(`${question} (input hidden): `);
+  ensure();
+  const wasRaw = stdin.isTTY ? stdin.isRaw : false;
+  if (stdin.isTTY) stdin.setRawMode(true);
+  try {
+    const line = await nextLine();
+    // In raw mode backspaces arrive as DEL/BS characters — apply them.
+    const out: string[] = [];
+    for (const ch of line ?? '') {
+      if (ch === '\u007f' || ch === '\b') out.pop();
+      else out.push(ch);
+    }
+    return out.join('').trim();
+  } finally {
+    if (stdin.isTTY) stdin.setRawMode(wasRaw);
+    stdout.write('\n');
+  }
+}
+
+/**
  * Yes/no confirmation for a write/destructive action. Prompt goes to STDERR so
  * it never mixes into the JSON/table the command prints on stdout. Defaults to
  * "no" on a bare Enter or end-of-input — the safe choice for a write.

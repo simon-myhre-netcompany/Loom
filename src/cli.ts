@@ -16,11 +16,12 @@ import { stdin, stdout } from 'node:process';
 import type { ActivityEvent } from './types.js';
 import { CONNECTORS, getConnector, type ConnectorSpec } from './registry.js';
 import { resolveOutputMode, renderEvents, renderCredentials, renderGuide } from './output.js';
-import { ask, select, closeInteractive } from './interactive.js';
+import { ask, askHidden, select, closeInteractive } from './interactive.js';
 import {
   loadRegistry,
   statusReport,
   upsertEntry,
+  setEnvSecret,
   type CredentialEntry,
 } from './credentials.js';
 import { parseFlags } from './util/args.js';
@@ -216,6 +217,21 @@ async function keysAdd(
 
   if (!env) fail('keys add: --env is required (or run interactively).');
 
+  // Optionally store the secret itself in .env, so setup is one command.
+  // Sources, by preference: piped stdin (--value-stdin, for scripts/agents),
+  // an explicit --value (convenient but lands in shell history — discouraged),
+  // or a hidden interactive prompt.
+  let value: string | undefined;
+  if (flags['value-stdin']) {
+    value = readFileSync(0, 'utf8').trim();
+    if (!value) fail('keys add: --value-stdin given but stdin was empty.');
+  } else if (typeof flags.value === 'string') {
+    value = flags.value;
+  } else if (interactive) {
+    const v = await askHidden(`Paste the ${env} secret (blank to skip)`);
+    if (v) value = v;
+  }
+
   const expires = parseExpires(expiresRaw);
   const entry: CredentialEntry = {
     env: env!,
@@ -224,6 +240,10 @@ async function keysAdd(
     expires,
   };
   upsertEntry(entry);
+  if (value) {
+    const path = setEnvSecret(env!, value);
+    stdout.write(`Stored the secret in ${path}.\n`);
+  }
   stdout.write(`Registered ${entry.env} (expires: ${expires ?? 'never'}).\n`);
   stdout.write(renderCredentials(statusReport()) + '\n');
 }
@@ -289,6 +309,8 @@ function printHelp(): void {
       '  loom keys                 list registered credentials + expiry',
       '  loom keys check           exit 1 if any expire soon (<30d) or expired',
       '  loom keys add --env X --expires YYYY-MM-DD [--label .. --source ..]',
+      '                            also stores the secret in .env: prompts',
+      '                            hidden at a TTY, or pipe it with --value-stdin',
       '',
       'credentials come from environment variables (see .env.example).',
     ].join('\n') + '\n'

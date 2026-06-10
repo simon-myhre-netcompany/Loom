@@ -79,7 +79,10 @@ scripts/loom-docker.sh tempo worklogs --since 7d --json --no-interactive
   <args>` — all API connectors + ICS calendar work there; secrets are never
   baked into the image (`.env` is mounted read-only at runtime).
 - **`loom keys [list|add|check]`** — credential expiry tracking. `check` exits
-  non-zero when a key expires within 30 days. `add --env X --expires YYYY-MM-DD`.
+  non-zero when a key expires within 30 days. `add --env X --expires YYYY-MM-DD`
+  also stores the secret itself in `.env` (hidden prompt at a TTY, or pipe it
+  via `--value-stdin`); the file is created 0600 and the var's line replaced
+  in place on rotation.
 - **The `logg` skill** (`.claude/skills/logg/`) — orchestrates the connectors to
   draft weekly status, suggest Tempo entries, and flag follow-ups.
 
