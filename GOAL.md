@@ -133,6 +133,45 @@ Once reads are trustworthy, extend connectors to **apply** changes:
 Each write capability is opt-in, reviewed by me before it fires, and gated
 behind explicit write credentials.
 
+## Phase 3 — portability: Ubuntu / container (later)
+
+Today Loom is developed and run on macOS. We want it to also run on **Ubuntu**
+and **inside a container** — e.g. the long-lived Claude Code container, CI, or a
+cron host — so the skill can fetch history without a Mac in the loop.
+
+**What already ports cleanly (no work):** the Node runtime and every
+**HTTP/API** connector — `tempo`, `jira`, `confluence`, `github`, `slack`. They
+are pure `fetch` + env-var credentials, so they run anywhere Node 18+ does. This
+is most of Loom's value and should work in a container as-is.
+
+**What is macOS-only and needs a story:**
+
+- **calendar** — reads Apple Calendar via a Swift **EventKit** helper compiled
+  by `scripts/build-helper.sh`. EventKit doesn't exist on Linux; the binary
+  can't build or run there.
+- **mail** — reads Apple Mail via `osascript`/JXA against Mail.app. No Mail.app
+  on Linux.
+
+**Plan:**
+
+1. **Detect platform and degrade gracefully.** On non-Darwin, the local-app
+   connectors should *skip with a clear message* (not crash); `build` must still
+   succeed (the helper build is a no-op off macOS). The API connectors keep
+   working — `loom` stays useful in the container.
+2. **Credentials stay env-var-first.** The env-var path (`.env`) is already
+   cross-platform; the planned macOS-Keychain migration is an *additional* Mac
+   convenience, never the only way in. A container just mounts `.env`.
+3. **Cross-platform substitutes for the local-app sources (optional, later).**
+   Where a container truly needs calendar/mail, revisit **Microsoft Graph** for
+   M365 calendar/mail behind the same `ActivityEvent` shape — acknowledging
+   Graph auth is the known-painful path (see Teams in the backlog).
+4. **Package it.** A small image (Node + the repo, no Swift toolchain), `loom` on
+   `PATH`, `.env` mounted. Document the macOS-vs-container capability matrix so
+   it's obvious which connectors are live where.
+
+Guardrails are unchanged: read-only by default, writes still gated and confirmed
+exactly as on macOS.
+
 ## Backlog (explicitly deferred)
 
 Agreed to do later, captured so we don't lose them:
