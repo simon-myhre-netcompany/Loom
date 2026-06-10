@@ -8,7 +8,7 @@
  */
 import type { ActivityEvent } from '../../types.js';
 import { parseFlags } from '../../util/args.js';
-import { parseSince, toDateString } from '../../util/time.js';
+import { parseSince, parseDateOnly, toDateString } from '../../util/time.js';
 import { searchMessages, type SlackMatch } from './client.js';
 
 interface NamedToken {
@@ -37,12 +37,19 @@ async function messages(argv: string[]): Promise<ActivityEvent[]> {
   }
 
   const sinceStr = typeof flags.since === 'string' ? flags.since : '7d';
-  const from = toDateString(parseSince(sinceStr));
   const until = typeof flags.until === 'string' ? flags.until : undefined;
 
-  // Slack search date modifiers: after:/before: are exclusive day boundaries.
-  let query = `from:me after:${from}`;
-  if (until) query += ` before:${until}`;
+  // Slack's after:/before: are EXCLUSIVE day boundaries, so shift each by one
+  // day to make --since/--until inclusive like every other connector
+  // (e.g. --since 2026-06-10 must return messages from June 10 itself).
+  const DAY_MS = 86_400_000;
+  const after = toDateString(new Date(parseSince(sinceStr).getTime() - DAY_MS));
+  let query = `from:me after:${after}`;
+  if (until) {
+    const u = parseDateOnly(until);
+    if (!u) throw usage(`--until must be YYYY-MM-DD, got "${until}"`);
+    query += ` before:${toDateString(new Date(u.getTime() + DAY_MS))}`;
+  }
 
   const perToken = await Promise.all(
     tokens.map(async (t) => (await searchMessages(t.token, query)).map((m) => toEvent(m)))
