@@ -19,11 +19,13 @@ for the full motivation, design, and roadmap.
 
 - ✅ **Tempo** worklogs — read your logged hours, **and log time** (write)
 - ✅ **GitHub** PRs & commits you authored, across accounts/orgs (read-only)
-- ✅ **Apple Calendar** events, local via EventKit (read-only)
+- ✅ **Calendar** events — Apple Calendar via EventKit on macOS, ICS feed URLs
+  (e.g. Outlook published calendars) everywhere else (read-only)
 - ✅ **Jira** issues you work on + your comments incl. `#TIL_KUNDE` (read-only)
 - ✅ **Confluence** pages you edited — incl. your weekly status (read-only)
 - ✅ **Slack** messages you sent, across workspaces (read-only)
-- ✅ **Apple Mail** sent messages, local via Mail.app (read-only)
+- ✅ **Apple Mail** sent + inbox messages, local via Mail.app (read-only,
+  macOS-only — disabled on Linux)
 - ⬜ Teams (Graph, high friction), Azure DevOps, local git — backlog (see GOAL.md)
 
 Everything is **read-only** except one deliberate write path: `loom tempo log`
@@ -132,6 +134,39 @@ loom keys add --env JIRA_API_TOKEN --expires 2027-06-05 --label "..." --source j
 ```
 
 Don't remember where a key comes from? `loom guide tempo` prints the steps.
+
+## Ubuntu / container (Phase 3)
+
+Loom also runs on Linux — natively (`npm run build` works without the Swift
+toolchain) or in the bundled Ubuntu 24.04 image:
+
+```bash
+docker build -t loom .
+scripts/loom-docker.sh tempo worklogs --since 7d --json   # build-if-needed + run
+```
+
+**Secrets stay on the host.** `.env` is dockerignored so no image layer can
+ever contain a token; the wrapper mounts it **read-only** into the container
+for the lifetime of one command (deliberately not `--env-file`, which would
+expose values via `docker inspect`). The container runs as a non-root user.
+
+### Capability matrix
+
+| Connector | macOS | Ubuntu / container | Notes |
+|---|---|---|---|
+| tempo | ✅ | ✅ | pure HTTP + env vars |
+| jira | ✅ | ✅ | pure HTTP + env vars |
+| confluence | ✅ | ✅ | pure HTTP + env vars |
+| github | ✅ | ✅ | pure HTTP + env vars |
+| slack | ✅ | ✅ | pure HTTP + env vars |
+| calendar | ✅ EventKit | ✅ ICS feeds | set `CALENDAR_ICS_URL`(`_<NAME>`) to published-calendar links; `--ics` forces that backend on macOS too |
+| mail | ✅ Mail.app | ❌ disabled | mail support is deliberately disabled on Linux; `loom mail` exits with a clear message there |
+| keys / guide | ✅ | ✅ | wrapper mounts `credentials.json` (metadata only) |
+
+To get an ICS link for the calendar: Outlook on the web → Settings → Calendar →
+Shared calendars → *Publish a calendar* → copy the ICS URL (`loom guide
+calendar` has the full steps). **Treat that URL like a token** — anyone holding
+it can read your calendar; keep it only in `.env`.
 
 ## Architecture
 

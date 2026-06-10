@@ -1,10 +1,11 @@
-// JXA helper for the Loom `mail` connector. Reads SENT messages from Apple
-// Mail (Mail.app) in a date range and prints them as JSON to stdout.
+// JXA helper for the Loom `mail` connector. Reads messages from Apple Mail
+// (Mail.app) in a date range and prints them as JSON to stdout. `--box`
+// selects which folders: "sent" (default) or "inbox".
 //
 // No network, no tokens — local Mail scripting, gated by the macOS Automation
 // privacy permission (your terminal app must be allowed to control Mail).
 //
-// Run: osascript -l JavaScript helper.js --from YYYY-MM-DD --to YYYY-MM-DD
+// Run: osascript -l JavaScript helper.js --from YYYY-MM-DD --to YYYY-MM-DD [--box sent|inbox]
 
 function run(argv) {
   function arg(name) {
@@ -14,8 +15,9 @@ function run(argv) {
 
   const fromStr = arg('--from');
   const toStr = arg('--to');
+  const box = arg('--box') || 'sent';
   if (!fromStr || !toStr) {
-    throw new Error('usage: helper.js --from YYYY-MM-DD --to YYYY-MM-DD');
+    throw new Error('usage: helper.js --from YYYY-MM-DD --to YYYY-MM-DD [--box sent|inbox]');
   }
   const from = new Date(fromStr + 'T00:00:00');
   const to = new Date(toStr + 'T23:59:59');
@@ -23,10 +25,13 @@ function run(argv) {
   const Mail = Application('Mail');
   Mail.includeStandardAdditions = true;
 
-  // Sent-folder names across English/Norwegian + Exchange variants.
+  // Folder names across English/Norwegian + Exchange variants.
   const SENT_RE = /sent|sendt|elementer/i;
+  const INBOX_RE = /^(inbox|innboks)$/i;
+  const isWanted = box === 'inbox' ? function (nm) { return INBOX_RE.test(nm); }
+                                   : function (nm) { return SENT_RE.test(nm); };
 
-  // Gather candidate "Sent" mailboxes from every account.
+  // Gather candidate mailboxes from every account.
   const candidates = [];
   let accounts = [];
   try {
@@ -52,16 +57,21 @@ function run(argv) {
       } catch (e) {
         continue;
       }
-      if (SENT_RE.test(nm)) candidates.push({ mb, acctName, mboxName: nm });
+      if (isWanted(nm)) candidates.push({ mb, acctName, mboxName: nm });
     }
   }
+
+  // Inbox messages are filtered on when they ARRIVED, sent on when they left.
+  const dateProp = box === 'inbox' ? 'dateReceived' : 'dateSent';
 
   const out = [];
   for (const c of candidates) {
     let msgs = [];
     try {
       // `whose` is evaluated by Mail (far faster than iterating everything).
-      msgs = c.mb.messages.whose({ dateSent: { '>': from } })();
+      const filter = {};
+      filter[dateProp] = { '>': from };
+      msgs = c.mb.messages.whose(filter)();
     } catch (e) {
       try {
         msgs = c.mb.messages();
@@ -72,7 +82,7 @@ function run(argv) {
     for (const m of msgs) {
       let d = null;
       try {
-        d = m.dateSent();
+        d = m[dateProp]();
       } catch (e) {
         continue;
       }
@@ -108,7 +118,7 @@ function run(argv) {
         subject: subject || '',
         sender: sender || '',
         recipients: recipients.filter(Boolean),
-        dateSent: d.toISOString(),
+        date: d.toISOString(),
       });
     }
   }

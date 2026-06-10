@@ -182,7 +182,7 @@ export const CONNECTORS: ConnectorSpec[] = [
   },
   {
     source: 'calendar',
-    description: 'Apple Calendar events (local, via EventKit — no API keys)',
+    description: 'Calendar events (macOS: Apple Calendar/EventKit; Linux: ICS feed URLs)',
     run: calendar.run,
     actions: [
       {
@@ -191,15 +191,16 @@ export const CONNECTORS: ConnectorSpec[] = [
         prompts: [
           { key: 'since', label: 'Look back how far? (e.g. 7d, 2w, YYYY-MM-DD)', default: '7d' },
           { key: 'until', label: 'Up until? (YYYY-MM-DD, blank = today)', prompt: false },
+          { key: 'ics', label: 'Force the ICS backend? (--ics)', prompt: false },
         ],
       },
     ],
     setup: [
       {
-        env: '(no API key — all local)',
+        env: '(macOS: no API key — all local)',
         required: true,
         steps: [
-          'Apple Calendar is read locally via EventKit. No tokens, no cloud auth.',
+          'On macOS, Apple Calendar is read locally via EventKit. No tokens.',
           '',
           '1. Get your calendars INTO Apple Calendar (Calendar.app):',
           '   System Settings → Internet Accounts → Add Account.',
@@ -216,6 +217,33 @@ export const CONNECTORS: ConnectorSpec[] = [
           '   Privacy & Security → Calendars and enable your terminal app.',
           '',
           'That is it — then `loom calendar events --since 14d` works.',
+        ],
+      },
+      {
+        env: 'CALENDAR_ICS_URL',
+        required: false,
+        steps: [
+          'Linux / container backend: one or more iCalendar (.ics) feed URLs.',
+          'EventKit does not exist off macOS, so there Loom reads published',
+          'calendar links instead (same `loom calendar events` command).',
+          '',
+          '1. Publish your Outlook/M365 calendar:',
+          '   Outlook on the web → Settings (gear) → Calendar →',
+          '   Shared calendars → "Publish a calendar".',
+          '   Pick the calendar, permission "Can view all details", Publish.',
+          '   Copy the ICS link.',
+          '2. Set it in .env as CALENDAR_ICS_URL. More calendars: add',
+          '   CALENDAR_ICS_URL_<NAME> vars (e.g. CALENDAR_ICS_URL_OSLO,',
+          '   CALENDAR_ICS_URL_NETCOMPANY) — Loom reads and merges them all.',
+          '   A local .ics file path also works (offline exports/tests).',
+          '',
+          'SECURITY: the published URL is a capability URL — anyone holding it',
+          'can read the calendar. Treat it exactly like an API token: only in',
+          '.env, never committed, never pasted into chats/tickets. Unpublish',
+          'in Outlook to revoke it.',
+          '',
+          'On macOS the EventKit helper wins when built; pass --ics to force',
+          'the feed backend (e.g. to test what the container will see).',
         ],
       },
     ],
@@ -256,6 +284,8 @@ export const CONNECTORS: ConnectorSpec[] = [
         prompts: [
           { key: 'key', label: 'Issue key (e.g. SOT-169)' },
           { key: 'to', label: 'Target status (e.g. "In Progress", "Done")' },
+          { key: 'resolution', label: 'Resolution if resolving (e.g. Fixed; blank to skip)', prompt: false },
+          { key: 'field', label: 'Screen field "Name=value" (e.g. "Løsningsmetode=...")', prompt: false },
         ],
       },
       {
@@ -419,12 +449,20 @@ export const CONNECTORS: ConnectorSpec[] = [
   },
   {
     source: 'mail',
-    description: 'Apple Mail sent messages (local, via Mail.app — no API keys)',
+    description: 'Apple Mail messages (macOS-only — disabled on Linux)',
     run: mail.run,
     actions: [
       {
         name: 'sent',
         description: 'Emails you sent in the range (from Mail.app Sent folders)',
+        prompts: [
+          { key: 'since', label: 'Look back how far? (e.g. 7d, 2w, YYYY-MM-DD)', default: '7d' },
+          { key: 'until', label: 'Up until? (YYYY-MM-DD, blank = today)', prompt: false },
+        ],
+      },
+      {
+        name: 'inbox',
+        description: 'Emails you received in the range (from Mail.app inboxes)',
         prompts: [
           { key: 'since', label: 'Look back how far? (e.g. 7d, 2w, YYYY-MM-DD)', default: '7d' },
           { key: 'until', label: 'Up until? (YYYY-MM-DD, blank = today)', prompt: false },
@@ -450,6 +488,15 @@ export const CONNECTORS: ConnectorSpec[] = [
           'Then `loom mail sent --since 14d` lists the emails you sent.',
           'Note: reads your Sent folders (Sent / Sendte elementer) across',
           'all accounts and merges them.',
+        ],
+      },
+      {
+        env: '(Linux: disabled)',
+        required: false,
+        steps: [
+          'Mail support is DISABLED on Ubuntu/Linux/containers — by decision.',
+          'On those platforms `loom mail` exits with a clear message; every',
+          'other source still works there. Run mail reads on the Mac.',
         ],
       },
     ],

@@ -1,0 +1,17 @@
+# SECRETS — never bake these into an image layer.
+.env
+.env.*
+!.env.example
+
+# Build artifacts / local state — rebuilt inside the image.
+node_modules/
+dist/
+bin/
+*.log
+.DS_Store
+
+# Not needed at runtime.
+.git/
+.claude/
+test/
+GOAL.md

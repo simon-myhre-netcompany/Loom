@@ -30,6 +30,16 @@ Fast iteration without building (runs the TypeScript directly):
 npm run loom -- tempo worklogs --since 7d
 ```
 
+For changes that touch portability (platform checks, the calendar/mail
+connectors, the Dockerfile), also verify the Ubuntu container path (needs
+`colima start` first):
+
+```bash
+scripts/loom-docker.sh --help                              # builds image if missing
+LOOM_DOCKER_BUILD=1 scripts/loom-docker.sh keys            # force rebuild + run
+scripts/loom-docker.sh tempo worklogs --since 7d --json --no-interactive
+```
+
 ## Tools available in this project
 
 - **`loom <source> <action> [flags]`** — fetch activity events. e.g.
@@ -48,13 +58,23 @@ npm run loom -- tempo worklogs --since 7d
   (a numeric id doesn't).
 - **`loom jira <comment|transition|describe|estimate|assign|rename|labels|set>`**
   — guarded Jira writes, one issue at a time via `--key`. `comment`/`describe`
-  take `--body`; `transition`/`assign`/`rename` take `--to`; `estimate` takes
+  take `--body`; `transition`/`assign`/`rename` take `--to`; `transition` also
+  takes screen fields required by the workflow — `--resolution "Fixed"` and a
+  repeatable `--field "Name=value"` (e.g. `--field "Løsningsmetode=..."`),
+  validated against the target transition's own screen; `estimate` takes
   `--original`/`--remaining` (Jira durations like `3h`, `1d 4h`); `labels` takes
   `--add`/`--remove` (comma-sep); `set` takes `--priority`/`--due` (YYYY-MM-DD);
   `assign --to` accepts a name/email/`me`/`none`. All preview the change and
   confirm before writing (`--dry-run` to preview, `--yes` to skip the prompt);
   they act as the authenticated Atlassian user.
 - **`loom guide [source]`** — step-by-step on how to obtain each credential.
+- **`loom calendar events`** — dual backend: Apple Calendar (EventKit) on
+  macOS; ICS feeds (`CALENDAR_ICS_URL`/`CALENDAR_ICS_URL_<NAME>`, `--ics` to
+  force) on Linux/containers. `mail` (sent + inbox) is macOS-only — disabled
+  on Linux by decision; it exits with a clear message there.
+- **Ubuntu/container:** `docker build -t loom .` or `scripts/loom-docker.sh
+  <args>` — all API connectors + ICS calendar work there; secrets are never
+  baked into the image (`.env` is mounted read-only at runtime).
 - **`loom keys [list|add|check]`** — credential expiry tracking. `check` exits
   non-zero when a key expires within 30 days. `add --env X --expires YYYY-MM-DD`.
 - **The `logg` skill** (`.claude/skills/logg/`) — orchestrates the connectors to

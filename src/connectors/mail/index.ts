@@ -1,9 +1,13 @@
 /**
- * Mail connector — reads SENT messages from Apple Mail via a JXA helper.
- * Read-only, local, no tokens. Needs the macOS Automation permission (your
- * terminal app allowed to control Mail.app).
+ * Mail connector — reads messages from Apple Mail via a JXA helper:
+ * `sent` (what you sent) and `inbox` (what arrived). Read-only, local, no
+ * tokens. Needs the macOS Automation permission (your terminal app allowed
+ * to control Mail.app).
  *
- *   loom mail sent [--since 7d] [--until YYYY-MM-DD]
+ * macOS-only by decision: mail support is disabled on Ubuntu/Linux.
+ *
+ *   loom mail sent  [--since 7d] [--until YYYY-MM-DD]
+ *   loom mail inbox [--since 7d] [--until YYYY-MM-DD]
  */
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -25,37 +29,45 @@ interface RawMail {
   subject: string;
   sender: string;
   recipients: string[];
-  dateSent: string;
+  /** dateSent for sent mail, dateReceived for inbox mail. */
+  date: string;
 }
+
+type Box = 'sent' | 'inbox';
 
 export async function run(action: string | undefined, argv: string[]): Promise<ActivityEvent[]> {
   switch (action) {
     case 'sent':
     case undefined:
-      return sent(argv);
+      return messages('sent', argv);
+    case 'inbox':
+      return messages('inbox', argv);
     default:
       throw usage(`unknown action "${action}"`);
   }
 }
 
-async function sent(argv: string[]): Promise<ActivityEvent[]> {
-  if (process.platform !== 'darwin') {
-    throw new Error('mail connector requires macOS (Apple Mail via JXA).');
-  }
-  if (!existsSync(HELPER)) {
-    throw new Error('Mail helper not found. Run `npm run build`, or check src/connectors/mail/helper.js.');
-  }
-
+async function messages(box: Box, argv: string[]): Promise<ActivityEvent[]> {
   const flags = parseFlags(argv);
   const sinceStr = typeof flags.since === 'string' ? flags.since : '7d';
   const from = toDateString(parseSince(sinceStr));
   const to = typeof flags.until === 'string' ? flags.until : toDateString(new Date());
 
+  if (process.platform !== 'darwin') {
+    throw new Error(
+      'mail: disabled on this platform — the mail connector is macOS-only ' +
+        '(reads Apple Mail). Run it on the Mac; the other sources work here.'
+    );
+  }
+  if (!existsSync(HELPER)) {
+    throw new Error('Mail helper not found. Run `npm run build`, or check src/connectors/mail/helper.js.');
+  }
+
   let stdout: string;
   try {
     const res = await execFileAsync(
       'osascript',
-      ['-l', 'JavaScript', HELPER, '--from', from, '--to', to],
+      ['-l', 'JavaScript', HELPER, '--from', from, '--to', to, '--box', box],
       { maxBuffer: 64 * 1024 * 1024 }
     );
     stdout = res.stdout;
@@ -73,20 +85,25 @@ async function sent(argv: string[]): Promise<ActivityEvent[]> {
   }
 
   const raw = JSON.parse(stdout || '[]') as RawMail[];
-  return raw.map(toEvent).sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+  return raw.map((m) => toEvent(m, box)).sort((a, b) => a.timestamp.localeCompare(b.timestamp));
 }
 
-function toEvent(m: RawMail): ActivityEvent {
+function toEvent(m: RawMail, box: Box): ActivityEvent {
   const to = m.recipients.length
     ? `${m.recipients[0]}${m.recipients.length > 1 ? ` +${m.recipients.length - 1}` : ''}`
     : '(no recipient)';
+  const title =
+    box === 'inbox'
+      ? `📥 ${m.subject || '(no subject)'} ← ${m.sender || '(unknown sender)'}${m.account ? ` [${m.account}]` : ''}`
+      : `✉️ ${m.subject || '(no subject)'} → ${to}${m.account ? ` [${m.account}]` : ''}`;
   return {
-    timestamp: m.dateSent,
+    timestamp: m.date,
     source: 'mail',
-    type: 'email',
-    ref: m.id || `${m.account}:${m.dateSent}`,
-    title: `✉️ ${m.subject || '(no subject)'} → ${to}${m.account ? ` [${m.account}]` : ''}`,
+    type: box === 'inbox' ? 'email-received' : 'email',
+    ref: m.id || `${m.account}:${m.date}`,
+    title,
     body: m.recipients.length ? `to: ${m.recipients.join(', ')}` : undefined,
+    actor: box === 'inbox' ? m.sender || undefined : undefined,
     // message:// opens it in Mail.app; id is the RFC Message-ID.
     url: m.id ? `message://%3c${encodeURIComponent(m.id)}%3e` : undefined,
     raw: m,
@@ -94,5 +111,7 @@ function toEvent(m: RawMail): ActivityEvent {
 }
 
 function usage(reason: string): Error {
-  return new Error(`mail: ${reason}\nusage: loom mail sent [--since 7d] [--until YYYY-MM-DD]`);
+  return new Error(
+    `mail: ${reason}\nusage: loom mail <sent|inbox> [--since 7d] [--until YYYY-MM-DD]`
+  );
 }

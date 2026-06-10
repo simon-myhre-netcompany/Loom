@@ -133,7 +133,16 @@ Once reads are trustworthy, extend connectors to **apply** changes:
 Each write capability is opt-in, reviewed by me before it fires, and gated
 behind explicit write credentials.
 
-## Phase 3 — portability: Ubuntu / container (later)
+## Phase 3 — portability: Ubuntu / container (done 2026-06-10)
+
+> Shipped: `Dockerfile` (Ubuntu 24.04, non-root, secrets never baked in) +
+> `scripts/loom-docker.sh` (mounts `.env` read-only per command). All five API
+> connectors verified live in the container. Calendar got a cross-platform
+> **ICS feed backend** (`CALENDAR_ICS_URL*`, e.g. Outlook published-calendar
+> links) instead of Graph. Mail stays macOS-only — support on Linux is
+> deliberately disabled (an IMAP backend was built and then removed by
+> decision; O365 tenants block IMAP basic auth anyway). Capability matrix
+> in README.md.
 
 Today Loom is developed and run on macOS. We want it to also run on **Ubuntu**
 and **inside a container** — e.g. the long-lived Claude Code container, CI, or a
