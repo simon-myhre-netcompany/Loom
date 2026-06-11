@@ -6,7 +6,11 @@
   "bin": {
     "loom": "dist/cli.js"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
+    "prepare": "npm run build",
     "build": "tsc && bash scripts/build-helper.sh",
     "build:helper": "bash scripts/build-helper.sh",
     "dev": "tsx src/cli.ts",

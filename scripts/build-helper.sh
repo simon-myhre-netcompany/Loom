@@ -11,6 +11,12 @@ mkdir -p dist/connectors/mail
 cp src/connectors/mail/helper.js dist/connectors/mail/helper.js
 echo "build-helper: copied mail helper.js into dist/"
 
+# Stamp the build for `loom --version`. "unknown" when there is no git checkout
+# (e.g. npm installing from a GitHub tarball).
+SHA="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+printf '{ "sha": "%s" }\n' "$SHA" > dist/build-info.json
+echo "build-helper: stamped dist/build-info.json ($SHA)"
+
 if [ "$(uname)" != "Darwin" ]; then
   echo "build-helper: not macOS, skipping the EventKit calendar helper."
   exit 0

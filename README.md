@@ -35,23 +35,34 @@ to run without `TEMPO_ACCOUNT_ID`) and confirms before posting. Other writes
 
 ## Get it
 
-**Download a prebuilt CLI instead of building it yourself:** every push to
-`main` runs the [build workflow](.github/workflows/build.yml), which publishes
-two pullable artifacts:
+Pick whichever fits — no clone needed for any of them:
 
-- **CLI tarball** — repo page → **Actions** → latest *build* run → **Artifacts**
-  → `loom-cli` (contains `dist/` — run with `node dist/cli.js`, Node 18+).
-  Or from a terminal:
+- **npm, straight from GitHub** (builds on install via the `prepare` hook;
+  needs Node 18+):
 
   ```bash
-  gh run download --name loom-cli   # then: tar xzf loom-cli.tgz
+  npm install -g github:<owner>/loom
+  loom --version
   ```
 
-- **Ubuntu container image** on GHCR:
+- **Prebuilt tarball from GitHub Releases** — every push to `main` publishes
+  one; durable, anonymous, curl-able:
+
+  ```bash
+  curl -fsSL https://github.com/<owner>/Loom/releases/latest/download/loom-cli.tgz | tar xz
+  node dist/cli.js --version
+  ```
+
+  (The same tarball is also an Actions artifact — `gh run download --name
+  loom-cli` — but artifacts expire and need `gh` auth; prefer the release.)
+
+- **Ubuntu container image** on GHCR (multi-arch: amd64 + arm64). For daily
+  driving, alias it so it feels like a native `loom`:
 
   ```bash
   docker pull ghcr.io/<owner>/loom:latest
-  docker run --rm -v "$PWD/.env:/app/.env:ro" ghcr.io/<owner>/loom:latest tempo worklogs --since 7d --json
+  alias loom='docker run --rm -i -v "$HOME/.config/loom/.env:/app/.env:ro" ghcr.io/<owner>/loom:latest'
+  loom status
   ```
 
 ## Setup (building locally)
@@ -63,7 +74,18 @@ npm link               # makes `loom` available globally on your PATH
 cp .env.example .env   # then fill in your tokens
 ```
 
-Credentials live in env vars (`.env` is gitignored). `JIRA_BASE_URL` is
+Credentials live in env vars. Loom looks for `.env` in three places, in order —
+all existing files are merged, earlier locations winning per variable:
+
+1. `$LOOM_ENV` — explicit path override, always wins.
+2. `~/.config/loom/.env` — the place for global (`npm i -g`) and docker
+   installs, where the package dir gets wiped on upgrade. Respects
+   `XDG_CONFIG_HOME`.
+3. `<repo>/.env` — next to `package.json` (repo clones; gitignored). Also where
+   the container's `/app/.env` mount lands.
+
+`loom keys add`/`import` write to the first location that already exists, and
+create `~/.config/loom/.env` (0600) when none does. `JIRA_BASE_URL` is
 **required** for the Jira/Confluence/Tempo connectors — Loom ships no default
 site; point it at your own, e.g. `JIRA_BASE_URL=https://your-site.atlassian.net`.
 
@@ -160,6 +182,7 @@ On success it prints the created worklog's id and emits the event:
 ### Other commands
 
 ```bash
+loom --version        # version + git SHA of the build (matches the image tags)
 loom status           # which connectors are usable here (env set? platform?)
 loom guide [source]   # how to obtain each credential (e.g. the Tempo token)
 loom keys import --file my.env   # merge a whole env-format file into .env

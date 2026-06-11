@@ -5,11 +5,13 @@
  * only *metadata* — which env vars we expect and when each one expires — so we
  * can answer "does any API key expire soon?" without ever storing the secret.
  *
- * Stored in credentials.json at the project root. It holds no secrets, but it
- * is personal state (which tokens you have, when they expire) — gitignored.
+ * Stored in credentials.json next to .env — ~/.config/loom/ for global
+ * installs, the project root for repo clones (see util/envfile.ts). It holds
+ * no secrets, but it is personal state (which tokens you have, when they
+ * expire) — gitignored.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { envFileForWrite, registryFileForRead, registryFileForWrite } from './util/envfile.js';
 
 export interface CredentialEntry {
   /** Environment variable holding the secret. */
@@ -35,9 +37,6 @@ export interface CredentialStatus extends CredentialEntry {
 /** Threshold (days) under which a key is considered "expiring soon". */
 export const SOON_DAYS = 30;
 
-const REGISTRY_PATH = fileURLToPath(new URL('../credentials.json', import.meta.url));
-const ENV_PATH = fileURLToPath(new URL('../.env', import.meta.url));
-
 /**
  * Parse env-file text into name/value pairs. The format (same one the CLI
  * loads at startup): one NAME=VALUE per line; `#` comments and blank lines
@@ -59,15 +58,16 @@ export function parseEnvText(text: string): Record<string, string> {
 }
 
 /**
- * Merge every NAME=VALUE from `pairs` into the project's .env in one write —
+ * Merge every NAME=VALUE from `pairs` into the resolved .env in one write —
  * existing NAME= lines replaced in place, new ones appended, everything else
  * (comments, unrelated vars) left untouched. Created 0600 when missing.
  * Returns the path written. Also updates process.env for this run.
  */
 export function importEnvSecrets(pairs: Record<string, string>): string {
+  const envPath = envFileForWrite();
   let text = '';
   try {
-    text = readFileSync(ENV_PATH, 'utf8');
+    text = readFileSync(envPath, 'utf8');
   } catch {
     /* no .env yet — we'll create it */
   }
@@ -78,12 +78,12 @@ export function importEnvSecrets(pairs: Record<string, string>): string {
     else lines.push(`${name}=${value}`);
     process.env[name] = value;
   }
-  writeFileSync(ENV_PATH, lines.join('\n') + '\n', { mode: 0o600 });
-  return ENV_PATH;
+  writeFileSync(envPath, lines.join('\n') + '\n', { mode: 0o600 });
+  return envPath;
 }
 
 /**
- * Store one NAME=value in the project's .env (see importEnvSecrets).
+ * Store one NAME=value in the resolved .env (see importEnvSecrets).
  * Returns the path written.
  */
 export function setEnvSecret(name: string, value: string): string {
@@ -95,8 +95,10 @@ interface RegistryFile {
 }
 
 export function loadRegistry(): CredentialEntry[] {
+  const path = registryFileForRead();
+  if (!path) return [];
   try {
-    const parsed = JSON.parse(readFileSync(REGISTRY_PATH, 'utf8')) as RegistryFile;
+    const parsed = JSON.parse(readFileSync(path, 'utf8')) as RegistryFile;
     return Array.isArray(parsed.credentials) ? parsed.credentials : [];
   } catch {
     return [];
@@ -105,7 +107,7 @@ export function loadRegistry(): CredentialEntry[] {
 
 export function saveRegistry(entries: CredentialEntry[]): void {
   const body = JSON.stringify({ credentials: entries }, null, 2) + '\n';
-  writeFileSync(REGISTRY_PATH, body, 'utf8');
+  writeFileSync(registryFileForWrite(), body, 'utf8');
 }
 
 /** Add or replace an entry (keyed by env), then persist. */

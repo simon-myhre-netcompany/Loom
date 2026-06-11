@@ -24,10 +24,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certifi
 
 WORKDIR /app
 COPY package.json package-lock.json tsconfig.json ./
-RUN npm ci
+# --ignore-scripts: the `prepare` hook (build) can't run before src/ is copied
+RUN npm ci --ignore-scripts
 COPY src ./src
 COPY scripts ./scripts
 RUN npm run build   # tsc + build-helper.sh (helper build is a no-op off macOS)
+
+# .git is dockerignored, so stamp the SHA for `loom --version` via build arg
+# (CI passes the commit; matches the image tag).
+ARG GIT_SHA=unknown
+RUN printf '{ "sha": "%s" }\n' "$GIT_SHA" > dist/build-info.json
 
 
 FROM ubuntu:24.04

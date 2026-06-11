@@ -27,6 +27,7 @@ import {
   type CredentialEntry,
 } from './credentials.js';
 import { parseFlags } from './util/args.js';
+import { envFilesForRead } from './util/envfile.js';
 
 async function main(): Promise<void> {
   loadDotEnv();
@@ -36,6 +37,11 @@ async function main(): Promise<void> {
 
   if (flags.help || flags.h || argv[0] === 'help') {
     printHelp();
+    return;
+  }
+
+  if (flags.version || argv[0] === 'version') {
+    printVersion();
     return;
   }
 
@@ -350,6 +356,7 @@ function printHelp(): void {
       '  -i, --interactive force interactive prompts',
       '  --no-interactive  never prompt (for agents/scripts)',
       '  -h, --help        show this help',
+      '  --version         print version + build SHA',
       '',
       'keys:',
       '  loom keys                 list registered credentials + expiry',
@@ -367,35 +374,54 @@ function printHelp(): void {
       '  1. write .env yourself at setup (copy .env.example and fill in),',
       '  2. per key:    loom keys add --env NAME --expires DATE',
       '  3. bulk:       loom keys import --file my-secrets.env',
+      '',
+      '.env is looked up in order: $LOOM_ENV, ~/.config/loom/.env, the package',
+      'root. All existing files are merged (earlier wins); writes go to the',
+      'first one that exists, else ~/.config/loom/.env is created.',
     ].join('\n') + '\n'
   );
 }
 
 /**
  * Tiny .env loader — no dependency. Only sets vars not already in the env.
- * Looks for .env at the project root from both `tsx src/cli.ts` and dist/.
+ * Merges every .env that exists (LOOM_ENV, ~/.config/loom/.env, the package
+ * root — see util/envfile.ts), earlier locations winning per variable.
  */
 function loadDotEnv(): void {
-  const candidates = [new URL('../.env', import.meta.url), new URL('../../.env', import.meta.url)];
-  let text: string | undefined;
-  for (const path of candidates) {
+  for (const path of envFilesForRead()) {
+    let text: string;
     try {
       text = readFileSync(path, 'utf8');
-      break;
     } catch {
-      /* try next */
+      continue;
+    }
+    for (const [key, val] of Object.entries(parseEnvText(text))) {
+      if (process.env[key] === undefined) process.env[key] = val;
     }
   }
-  if (text === undefined) return;
-  for (const line of text.split('\n')) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-    const eq = trimmed.indexOf('=');
-    if (eq === -1) continue;
-    const key = trimmed.slice(0, eq).trim();
-    const val = trimmed.slice(eq + 1).trim();
-    if (key && process.env[key] === undefined) process.env[key] = val;
+}
+
+/** `loom --version` — package version plus the git SHA the build was cut from. */
+function printVersion(): void {
+  let version = 'unknown';
+  try {
+    const pkg = JSON.parse(
+      readFileSync(new URL('../package.json', import.meta.url), 'utf8')
+    ) as { version?: string };
+    version = pkg.version ?? version;
+  } catch {
+    /* keep 'unknown' */
   }
+  let sha: string | undefined;
+  try {
+    const info = JSON.parse(
+      readFileSync(new URL('./build-info.json', import.meta.url), 'utf8')
+    ) as { sha?: string };
+    sha = info.sha;
+  } catch {
+    /* dev run (tsx) or pre-build — no build-info.json */
+  }
+  stdout.write(`loom ${version}${sha && sha !== 'unknown' ? ` (${sha})` : ''}\n`);
 }
 
 function fail(message: string): never {
