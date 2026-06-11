@@ -9,6 +9,12 @@ permissions:
   contents: read
   packages: write
 
+env:
+  IMAGE_DESCRIPTION: >-
+    Loom — an AI-driven CLI that connects your work apps (Tempo, Jira,
+    Confluence, GitHub, Slack, calendar) and emits one normalized
+    activity-event stream. Mount your .env read-only at /app/.env.
+
 jobs:
   # Build the CLI on Ubuntu and publish it as a downloadable artifact.
   # Pull it with:  gh run download --repo <owner>/Loom --name loom-cli
@@ -32,20 +38,37 @@ jobs:
           path: loom-cli.tgz
           retention-days: 30
 
-  # Build the Ubuntu container image and push it to GHCR.
+  # Build the Ubuntu container image for amd64 + arm64 and push to GHCR.
   # Pull it with:  docker pull ghcr.io/<owner>/loom:latest
   image:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Compute image name and tag
+        id: meta
+        run: |
+          echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/loom" >> "$GITHUB_OUTPUT"
+          echo "sha7=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-qemu-action@v3 # arm64 build runs under emulation
+      - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and push
-        run: |
-          IMAGE="ghcr.io/$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/loom"
-          docker build -t "$IMAGE:latest" -t "$IMAGE:${GITHUB_SHA::7}" .
-          docker push "$IMAGE:latest"
-          docker push "$IMAGE:${GITHUB_SHA::7}"
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image }}:latest
+            ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.sha7 }}
+          labels: |
+            org.opencontainers.image.description=${{ env.IMAGE_DESCRIPTION }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          # GHCR reads the description for multi-arch images from the
+          # manifest *index* annotations, not the per-arch image labels.
+          annotations: |
+            index:org.opencontainers.image.description=${{ env.IMAGE_DESCRIPTION }}
+            index:org.opencontainers.image.source=https://github.com/${{ github.repository }}
