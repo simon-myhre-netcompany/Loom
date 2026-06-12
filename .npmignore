@@ -1,0 +1,8 @@
+# npm packs per package.json "files" (dist). This file exists so npm does
+# NOT fall back to .gitignore, which excludes dist/ — for git installs that
+# fallback is applied even inside "files" directories and strips the build.
+src
+test
+scripts
+bin
+.claude
