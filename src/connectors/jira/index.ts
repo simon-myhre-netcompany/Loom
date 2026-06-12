@@ -426,7 +426,23 @@ async function transition(argv: string[]): Promise<ActivityEvent[]> {
   }
   if (!(await confirmOrAbort(plan, flags))) return [];
 
-  await transitionIssue(base, email, token, key, target.id, fields);
+  try {
+    await transitionIssue(base, email, token, key, target.id, fields);
+  } catch (err) {
+    // Workflow validators can demand fields beyond what the screen meta marks
+    // required (e.g. "Løsningsmetode er påkrevd."), so a clean local check is
+    // impossible — instead, make the 400 actionable: name the screen's fields
+    // so the one Jira complains about can be set with --field.
+    const screenFields = Object.entries(target.fields ?? {})
+      .map(([fid, f]) => `"${f.name ?? fid}"`)
+      .join(', ');
+    throw new Error(
+      `${(err as Error).message}\n` +
+        `Hint: if Jira says a field is required, set it and retry — this ` +
+        `transition's screen accepts: ${screenFields || '(none)'}. ` +
+        `Syntax: --field "Name=value" (e.g. --field "Løsningsmetode=...").`
+    );
+  }
   stderr.write(`✅ ${key} → ${newStatus}.\n`);
   return [statusEvent(key, detail.status, newStatus, base)];
 }
