@@ -9,8 +9,13 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-if [ ! -x node_modules/.bin/tsc ]; then
-  npm install --no-save --silent "typescript@^5" "@types/node@^22"
+# Invoke the compiler by its real path: at prepare time the package is in
+# node_modules but the .bin/ links are not created yet.
+TSC="node_modules/typescript/bin/tsc"
+if [ ! -f "$TSC" ]; then
+  # npm_config_global leaks in from a surrounding `npm install -g` and would
+  # silently send this nested install to the global prefix.
+  npm_config_global=false npm install --no-save --silent "typescript@^5" "@types/node@^22"
 fi
-node_modules/.bin/tsc
+node "$TSC"
 bash scripts/build-helper.sh
