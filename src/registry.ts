@@ -181,7 +181,7 @@ export const CONNECTORS: ConnectorSpec[] = [
       {
         name: 'comments',
         description:
-          'Your comments & reviews on issues/PRs (--all for everyone\'s on those threads)',
+          'Your comments & reviews on issues/PRs (--all for everyone\'s, incl. on threads you authored)',
         prompts: [
           { key: 'since', label: 'Look back how far? (e.g. 7d, 2w, YYYY-MM-DD)', default: '7d' },
           { key: 'until', label: 'Up until? (YYYY-MM-DD, blank = today)', prompt: false },

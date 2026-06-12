@@ -16,6 +16,7 @@ import {
   searchAuthoredPRs,
   searchAuthoredCommits,
   searchCommentedIssues,
+  searchAuthoredIssues,
   listIssueComments,
   listReviewComments,
   listReviews,
@@ -85,9 +86,11 @@ async function commitsForToken(t: NamedToken, from: string, to: string): Promise
 }
 
 /**
- * Comments: search for issues/PRs the login commented on in the range, then
- * fetch each thread's conversation comments, inline review comments and review
- * verdicts. Default: only the login's own comments; --all keeps everyone's.
+ * Comments: search for issues/PRs the login commented on in the range — and,
+ * with --all, also threads the login *authored* (so reviewers' comments on
+ * your PRs show up before you've replied) — then fetch each thread's
+ * conversation comments, inline review comments and review verdicts.
+ * Default: only the login's own comments; --all keeps everyone's.
  */
 async function commentsForToken(
   t: NamedToken,
@@ -97,7 +100,12 @@ async function commentsForToken(
 ): Promise<ActivityEvent[]> {
   const login = await getLogin(t.token);
   const all = flags.all === true;
-  const issues = await searchCommentedIssues(t.token, login, from, to);
+  const threadLists = await Promise.all([
+    searchCommentedIssues(t.token, login, from, to),
+    all ? searchAuthoredPRs(t.token, login, from, to) : Promise.resolve([]),
+    all ? searchAuthoredIssues(t.token, login, from, to) : Promise.resolve([]),
+  ]);
+  const issues = dedupeIssues(threadLists.flat());
   const since = `${from}T00:00:00Z`;
   const toEnd = `${to}T23:59:59Z`;
   const inRange = (ts: string | null | undefined): ts is string =>
@@ -209,6 +217,19 @@ function collectTokens(flags: Record<string, string | boolean>): NamedToken[] {
     if (key === 'GITHUB_TOKEN') out.push({ label: 'default', token: value });
     else if (key.startsWith('GITHUB_TOKEN_'))
       out.push({ label: key.slice('GITHUB_TOKEN_'.length).toLowerCase(), token: value });
+  }
+  return out;
+}
+
+/** One entry per thread when the commented + authored searches overlap. */
+function dedupeIssues(issues: GhPr[]): GhPr[] {
+  const seen = new Set<string>();
+  const out: GhPr[] = [];
+  for (const issue of issues) {
+    const key = `${issue.repository_url}#${issue.number}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(issue);
   }
   return out;
 }

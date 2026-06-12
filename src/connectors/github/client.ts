@@ -132,6 +132,16 @@ export function searchAuthoredCommits(
   return searchAll<GhCommit>('/search/commits', `author:${login} author-date:${from}..${to}`, token);
 }
 
+/** Issues (not PRs) authored by `login`, with activity in the date range. */
+export function searchAuthoredIssues(
+  token: string,
+  login: string,
+  from: string,
+  to: string
+): Promise<GhPr[]> {
+  return searchAll<GhPr>('/search/issues', `author:${login} is:issue updated:${from}..${to}`, token);
+}
+
 /**
  * Issues & PRs `login` commented on, with activity in the date range.
  * The Search API requires every query to carry `is:issue` or `is:pull-request`,
