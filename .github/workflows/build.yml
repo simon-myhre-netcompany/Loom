@@ -29,9 +29,10 @@ jobs:
       - run: npm ci --ignore-scripts # skip the prepare hook; we build explicitly below
       - run: npm run typecheck
       - run: npm run build # helper build is a no-op off macOS by design
-      # Everything needed to run `node dist/cli.js` on any Node 18+ box.
+      # A real npm package tarball (contents under package/), so it is BOTH
+      # `npm install -g <url>`-able and untar-and-run (node package/dist/cli.js).
       # No .env / credentials metadata — secrets and personal state stay local.
-      - run: tar czf loom-cli.tgz dist package.json README.md
+      - run: npm pack --ignore-scripts && mv loom-*.tgz loom-cli.tgz
       - uses: actions/upload-artifact@v4
         with:
           name: loom-cli

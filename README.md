@@ -48,11 +48,14 @@ Pick whichever fits — no clone needed for any of them:
   ```
 
 - **Prebuilt tarball from GitHub Releases** — every push to `main` publishes
-  one; durable, anonymous, curl-able:
+  one; durable, anonymous, no compiler needed (it's a real npm package
+  tarball):
 
   ```bash
+  npm install -g https://github.com/<owner>/Loom/releases/latest/download/loom-cli.tgz
+  # or without npm at all:
   curl -fsSL https://github.com/<owner>/Loom/releases/latest/download/loom-cli.tgz | tar xz
-  node dist/cli.js --version
+  node package/dist/cli.js --version
   ```
 
   (The same tarball is also an Actions artifact — `gh run download --name

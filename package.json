@@ -10,7 +10,7 @@
     "dist"
   ],
   "scripts": {
-    "prepare": "npm run build",
+    "prepare": "bash scripts/prepare.sh",
     "build": "tsc && bash scripts/build-helper.sh",
     "build:helper": "bash scripts/build-helper.sh",
     "dev": "tsx src/cli.ts",
