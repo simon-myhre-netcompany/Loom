@@ -39,27 +39,25 @@ to run without `TEMPO_ACCOUNT_ID`) and confirms before posting. Other writes
 
 Pick whichever fits — no clone needed for any of them:
 
-- **npm, straight from GitHub** (builds on install via the `prepare` hook;
-  needs Node 18+):
-
-  ```bash
-  npm install -g github:<owner>/loom
-  loom --version
-  ```
-
-- **Prebuilt tarball from GitHub Releases** — every push to `main` publishes
-  one; durable, anonymous, no compiler needed (it's a real npm package
-  tarball):
+- **npm, from the latest GitHub Release** (Node 18+; prebuilt, no compiler):
 
   ```bash
   npm install -g https://github.com/<owner>/Loom/releases/latest/download/loom-cli.tgz
-  # or without npm at all:
+  loom --version
+  ```
+
+  Or without npm at all:
+
+  ```bash
   curl -fsSL https://github.com/<owner>/Loom/releases/latest/download/loom-cli.tgz | tar xz
   node package/dist/cli.js --version
   ```
 
   (The same tarball is also an Actions artifact — `gh run download --name
-  loom-cli` — but artifacts expire and need `gh` auth; prefer the release.)
+  loom-cli` — but artifacts expire and need `gh` auth; prefer the release.
+  Don't use `npm install -g github:<owner>/loom`: npm's git-dependency
+  packing silently drops the `prepare`-built `dist/` on several npm
+  versions.)
 
 - **Ubuntu container image** on GHCR (multi-arch: amd64 + arm64). For daily
   driving, alias it so it feels like a native `loom`:

@@ -32,7 +32,7 @@ jobs:
       # A real npm package tarball (contents under package/), so it is BOTH
       # `npm install -g <url>`-able and untar-and-run (node package/dist/cli.js).
       # No .env / credentials metadata — secrets and personal state stay local.
-      - run: npm pack --ignore-scripts && mv loom-*.tgz loom-cli.tgz
+      - run: chmod +x dist/cli.js && npm pack --ignore-scripts && mv loom-*.tgz loom-cli.tgz
       - uses: actions/upload-artifact@v4
         with:
           name: loom-cli
