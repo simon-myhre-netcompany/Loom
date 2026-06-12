@@ -80,6 +80,16 @@ to see what's wired up.
 - **Cite what you found** (`ref`, `url`) so the user can click through.
 - If a connector errors (missing token, network), say so and use the sources
   that worked — don't invent results.
+- **Network errors? Check the VPN first.** Some backends are only reachable on
+  the Netcompany VPN. The user runs his own VPN menu-bar app, Very Persistent
+  Ninja — query it before debugging anything else:
+  - macOS host: `/Applications/VeryPersistentNinja.app/Contents/MacOS/ninja-check`
+    → prints `true` (exit 0) connected / `false` (exit 1) not; `--line` for a
+    human string. Reconnect with `open "ninja://connect"`.
+  - Inside a cs/csr container (macOS binary unavailable): probe a VPN-only
+    endpoint: `curl -s --max-time 5 -o /dev/null -w '%{http_code}'
+    https://kibana.marvin.oslo.kommune.no/api/status` — `200` = VPN OK,
+    timeout/`000` = no VPN (the user must connect on the host).
 - **If Loom doesn't work, do NOT bypass it** — never call the underlying APIs
   (Jira/Tempo/Atlassian REST, GitHub, Slack, ...) directly with curl/fetch or
   by reading tokens from `.env`. Stop, tell the user it does not work, and give
