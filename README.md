@@ -8,8 +8,8 @@ copy-pasting between apps.
 
 Each connector emits a **normalized activity-event** stream, so everything you
 did across systems merges into one timeline. On top of that the skills reason
-over it: **`loom-search`** finds things across all apps (a ticket, a PR, a
-thread, an email); **`loom-logg`** drafts your weekly status and fills Tempo.
+over it: **`loomSearch`** finds things across all apps (a ticket, a PR, a
+thread, an email); **`loomLogg`** drafts your weekly status and fills Tempo.
 
 Mostly **read-only**, with one deliberate write path — `loom tempo log` creates
 Tempo worklogs under your own account, with confirmation. See [`GOAL.md`](./GOAL.md)
@@ -235,7 +235,7 @@ it can read your calendar; keep it only in `.env`.
 - **Registry** (`src/registry.ts`) — single source of truth for sources,
   actions, prompts, and credential guides.
 - **Skills** (`.claude/skills/`) — orchestrate the connectors in conversation:
-  - **`loom-search`** — fetch/find things across all apps (tickets, PRs,
+  - **`loomSearch`** — fetch/find things across all apps (tickets, PRs,
     messages, mail, pages) so you don't copy-paste from app to agent.
-  - **`loom-logg`** — search your history, then fill Tempo (write, after you
+  - **`loomLogg`** — search your history, then fill Tempo (write, after you
     agree) or draft a short ukentlig status (read-only).

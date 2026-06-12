@@ -1,9 +1,9 @@
 ---
-name: loom-search
+name: loomSearch
 description: Use Loom (the `loom` CLI) to fetch and search the user's work across all the apps it integrates (Tempo, Jira, Confluence, GitHub, Slack, Apple Mail, Apple Calendar) — e.g. find a Jira task, a PR, a Slack message, an email, a meeting, or a worklog — so they never have to copy-paste from an app into the chat. Use whenever the user asks you to look something up, find a ticket/PR/message/page, or pull context from one of their work apps.
 ---
 
-# loom-search
+# loomSearch
 
 **Loom** is a CLI (`loom`) with read access to many of the apps the user works
 in. It is **built for an AI (you) to use** — the whole point is to speed up
@@ -23,7 +23,7 @@ Apps Loom can search:
 - **calendar** — calendar meetings & events.
 
 > This skill is **read-only / search**. Loom *can* write (worklogs, a ticket's
-> Account, and Jira fields), but that lives in the `loom-logg` skill.
+> Account, and Jira fields), but that lives in the `loomLogg` skill.
 
 ## How to search
 
@@ -47,7 +47,7 @@ loom tempo accounts --search <text> --json         # find a Tempo billing accoun
 ```
 
 > Search/read only. Writing (worklogs, setting a ticket's Account, and the
-> `jira` write actions) lives in the `loom-logg` skill — use that when the user
+> `jira` write actions) lives in the `loomLogg` skill — use that when the user
 > wants to *change* something.
 
 Useful flags: `--since 7d|24h|2w|YYYY-MM-DD`, `--until YYYY-MM-DD`, `--json`

@@ -49,7 +49,7 @@ A deliberate split that mirrors how Claude Code works:
 1. **Connectors = small, boring CLI tools** — one per source. Each only
    **reads** and prints structured JSON. Trivial to test in isolation
    (`loom tempo worklogs --since 7d`).
-2. **A `logg` skill** — knows which connectors to call, fetches recent history,
+2. **A `loomLogg` skill** — knows which connectors to call, fetches recent history,
    merges it into one timeline, and reasons over it *with me* in conversation.
 
 The intelligence lives in the skill + the conversation. The connectors stay
@@ -114,7 +114,7 @@ biggest recurring pain and JTI already proved the integration.
 | 7 | **Teams** | (deferred) | — | MS Graph perms are painful; lowest priority. |
 
 > Within each source we follow the same loop: build the read connector → emit
-> normalized events → teach the `logg` skill to use it → validate against real
+> normalized events → teach the `loomLogg` skill to use it → validate against real
 > history.
 
 ## Phase 2 — write (later, explicitly out of scope for now)

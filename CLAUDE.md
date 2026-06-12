@@ -1,7 +1,7 @@
 # CLAUDE.md — working in the Loom repo
 
 Loom is a **read-only** work-history aggregator: small CLI connectors (one per
-source) emit a normalized `ActivityEvent` stream that the `logg` skill reasons
+source) emit a normalized `ActivityEvent` stream that the `loomLogg` skill reasons
 over. See `GOAL.md` for the full motivation and roadmap, `README.md` for usage.
 
 ## Golden rule: build and test after every change
@@ -83,8 +83,9 @@ scripts/loom-docker.sh tempo worklogs --since 7d --json --no-interactive
   also stores the secret itself in `.env` (hidden prompt at a TTY, or pipe it
   via `--value-stdin`); the file is created 0600 and the var's line replaced
   in place on rotation.
-- **The `logg` skill** (`.claude/skills/logg/`) — orchestrates the connectors to
-  draft weekly status, suggest Tempo entries, and flag follow-ups.
+- **Skills:** `loomSearch` (`.claude/skills/loomSearch/`, in-repo) fetches and
+  finds things across all apps; `loomLogg` (personal, global — not in the repo)
+  drafts weekly status, suggests Tempo entries, and flags follow-ups.
 
 ### Output modes (dual-mode CLI)
 
