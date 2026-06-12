@@ -450,13 +450,28 @@ export const CONNECTORS: ConnectorSpec[] = [
     availability: () => envFamily('SLACK_TOKEN')
       ? { state: 'ready', detail: 'credentials present' }
       : { state: 'unconfigured', detail: 'set SLACK_TOKEN_<WORKSPACE> in .env' },
-    description: 'Slack messages you sent (across workspaces)',
+    description: 'Slack messages — yours, a channel\'s, or any search (across workspaces)',
     run: slack.run,
     actions: [
       {
         name: 'messages',
-        description: 'Messages you sent in the range (search.messages from:me)',
+        description:
+          'Search messages (default: yours; --channel/--from/--query search anything you can see)',
         prompts: [
+          { key: 'since', label: 'Look back how far? (e.g. 7d, 2w, YYYY-MM-DD)', default: '7d' },
+          { key: 'until', label: 'Up until? (YYYY-MM-DD, blank = today)', prompt: false },
+          { key: 'channel', label: 'Limit to a channel? (name, blank = all)', prompt: false },
+          { key: 'from', label: 'From whom? (@user / me, blank = anyone)', prompt: false },
+          { key: 'query', label: 'Free-text search? (blank = none)', prompt: false },
+        ],
+      },
+      {
+        name: 'history',
+        description:
+          'Every message in one channel, exact time window, bot posts included ' +
+          '(needs channels:read + channels:history scopes)',
+        prompts: [
+          { key: 'channel', label: 'Which channel? (name or id)' },
           { key: 'since', label: 'Look back how far? (e.g. 7d, 2w, YYYY-MM-DD)', default: '7d' },
           { key: 'until', label: 'Up until? (YYYY-MM-DD, blank = today)', prompt: false },
         ],
@@ -474,8 +489,12 @@ export const CONNECTORS: ConnectorSpec[] = [
           '   (NOT "generate token" — that is for app-config, not what we want.)',
           '2. Left sidebar → "OAuth & Permissions".',
           '3. Under "User Token Scopes" (NOT Bot), add:',
-          '     search:read   (find your messages)',
+          '     search:read   (search messages: yours, a channel, free text)',
           '     users:read    (resolve your identity)',
+          '   and, only if you want `slack history` (walk a full channel,',
+          '   bot posts included):',
+          '     channels:read + channels:history   (public channels)',
+          '     groups:read   + groups:history     (private channels)',
           '4. Top of the page → "Install to Workspace".',
           '   - "Allow" screen  → you can self-serve. Click Allow.',
           '   - "Request to Install" → needs an admin; ask IT or try another',

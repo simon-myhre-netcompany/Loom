@@ -23,7 +23,9 @@ for the full motivation, design, and roadmap.
   (e.g. Outlook published calendars) everywhere else (read-only)
 - ✅ **Jira** issues you work on + your comments incl. `#TIL_KUNDE` (read-only)
 - ✅ **Confluence** pages you edited — incl. your weekly status (read-only)
-- ✅ **Slack** messages you sent, across workspaces (read-only)
+- ✅ **Slack** messages — yours by default; `--channel`/`--from`/`--query`
+  search anything you can see, and `slack history` walks one channel
+  completely, bot posts included (read-only)
 - ✅ **Apple Mail** sent + inbox messages, local via Mail.app (read-only,
   macOS-only — disabled on Linux)
 - ⬜ Teams (Graph, high friction), Azure DevOps, local git — backlog (see GOAL.md)

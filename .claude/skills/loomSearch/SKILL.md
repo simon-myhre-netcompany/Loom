@@ -18,7 +18,8 @@ Apps Loom can search:
   `--all`).
 - **confluence** — pages they've edited (incl. their weekly status).
 - **github** — PRs & commits they authored (across accounts/orgs).
-- **slack** — messages they sent, across workspaces.
+- **slack** — messages: theirs by default, or any channel / person / free-text
+  search they can see; `history` walks one channel completely (bot posts included).
 - **mail** — Apple Mail messages they sent or received.
 - **calendar** — calendar meetings & events.
 
@@ -39,6 +40,12 @@ loom jira comments --key ABC-123 --all --json      # the WHOLE thread (everyone)
 loom github prs --since 2w --json                  # PRs the user authored
 loom github commits --since 1w --json
 loom slack messages --since 1w --json              # messages the user sent
+loom slack messages --channel team-x --since 3d --json   # everyone's messages in #team-x
+loom slack messages --query "deploy failed" --json # free-text search
+loom slack messages --from @kari --since 7d --json # one person's messages
+loom slack history --channel team-x --since 3d --json    # full channel history, incl. bots
+#   (history needs channels:read + channels:history token scopes; search needs
+#    only search:read. Buttons in app messages CANNOT be clicked via API.)
 loom mail sent --since 2w --json                   # emails the user sent
 loom confluence pages --since 30d --json           # pages the user edited
 loom calendar events --since 1w --json
