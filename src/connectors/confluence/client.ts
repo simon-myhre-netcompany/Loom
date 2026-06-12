@@ -41,6 +41,79 @@ interface SearchResponse {
   _links?: { next?: string; base?: string };
 }
 
+/** A single page's content, fetched by id (for `loom confluence page`). */
+export interface ConfluencePage {
+  id: string;
+  title: string;
+  spaceKey?: string;
+  url: string;
+  version?: number;
+  /** Storage-format body (HTML-ish XML). */
+  body: string;
+}
+
+interface RawPage {
+  id: string;
+  title: string;
+  space?: { key?: string };
+  version?: { number?: number };
+  body?: { storage?: { value?: string } };
+  _links?: { webui?: string; base?: string };
+}
+
+/**
+ * Fetch one page by id, with its storage-format body, version and space.
+ * The classic content endpoint; expand body.storage so we get the HTML.
+ */
+export async function getPageById(
+  base: string,
+  email: string,
+  token: string,
+  id: string
+): Promise<ConfluencePage> {
+  const headers = { Authorization: basicAuthHeader(email, token) };
+  const origin = new URL(base).origin;
+  const r = await fetchJson<RawPage>(
+    `${base}/rest/api/content/${encodeURIComponent(id)}?expand=body.storage,version,space`,
+    { headers }
+  );
+  const webBase = r._links?.base ?? base;
+  return {
+    id: r.id,
+    title: r.title,
+    spaceKey: r.space?.key,
+    url: r._links?.webui ? webBase + r._links.webui : webBase,
+    version: r.version?.number,
+    body: r.body?.storage?.value ?? '',
+  };
+}
+
+/**
+ * Find a page id by title (optionally scoped to a space), via CQL content
+ * search. Returns the best match's id, or null when nothing matches.
+ */
+export async function findPageByTitle(
+  base: string,
+  email: string,
+  token: string,
+  title: string,
+  spaceKey?: string
+): Promise<string | null> {
+  const headers = { Authorization: basicAuthHeader(email, token) };
+  const escaped = title.replace(/"/g, '\\"');
+  const cql =
+    `title ~ "${escaped}" and type = page` + (spaceKey ? ` and space = ${spaceKey}` : '');
+  const res = await fetchJson<SearchResponse>(
+    `${base}/rest/api/content/search?cql=${encodeURIComponent(cql)}&limit=10`,
+    { headers }
+  );
+  const results = res.results ?? [];
+  if (!results.length) return null;
+  // Prefer an exact (case-insensitive) title match, else the first hit.
+  const exact = results.find((r) => r.title.trim().toLowerCase() === title.trim().toLowerCase());
+  return (exact ?? results[0]).id;
+}
+
 export async function searchContent(params: SearchParams): Promise<ConfluenceContent[]> {
   const { base, email, token, cql, pageLimit = 10 } = params;
   const headers = { Authorization: basicAuthHeader(email, token) };

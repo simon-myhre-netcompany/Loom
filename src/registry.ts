@@ -322,6 +322,28 @@ export const CONNECTORS: ConnectorSpec[] = [
         ],
       },
       {
+        name: 'search',
+        description: 'Run an arbitrary JQL query and list matching issues',
+        prompts: [
+          { key: 'jql', label: 'JQL query (e.g. "parent = ABC-1 ORDER BY created DESC")' },
+          { key: 'limit', label: 'Max results (default 50)', prompt: false },
+          { key: 'fields', label: 'Extra fields, comma-sep (blank = defaults)', prompt: false },
+        ],
+      },
+      {
+        name: 'create',
+        description: 'WRITE: create an issue (confirms; --dry-run/--yes)',
+        prompts: [
+          { key: 'type', label: 'Issue type name (e.g. Feil)' },
+          { key: 'summary', label: 'Summary' },
+          { key: 'project', label: 'Project key (blank = infer from --parent)', prompt: false },
+          { key: 'parent', label: 'Parent issue key (blank = none)', prompt: false },
+          { key: 'description', label: 'Description (blank = none)', prompt: false },
+          { key: 'assignee', label: 'Assignee ("me" or accountId; blank = none)', prompt: false },
+          { key: 'labels', label: 'Labels, comma-sep (blank = none)', prompt: false },
+        ],
+      },
+      {
         name: 'comment',
         description: 'WRITE: post a comment on an issue (confirms; --dry-run/--yes)',
         prompts: [
@@ -439,6 +461,15 @@ export const CONNECTORS: ConnectorSpec[] = [
         prompts: [
           { key: 'since', label: 'Look back how far? (e.g. 30d, 2w, YYYY-MM-DD)', default: '30d' },
           { key: 'cql', label: 'Custom CQL? (blank = your recent pages)', prompt: false },
+        ],
+      },
+      {
+        name: 'page',
+        description: 'Fetch one page by --id or --title (with optional --space)',
+        prompts: [
+          { key: 'id', label: 'Page id (blank to look up by title instead)', prompt: false },
+          { key: 'title', label: 'Page title (used when no --id)', prompt: false },
+          { key: 'space', label: 'Space key to scope a title lookup (blank = any)', prompt: false },
         ],
       },
     ],

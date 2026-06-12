@@ -23,10 +23,13 @@ import {
   getTransitions,
   transitionIssue,
   updateIssueFields,
+  getCreateMetaIssueTypes,
+  createIssue,
   type JiraIssue,
   type JiraComment,
   type JiraTransition,
   type TransitionFieldMeta,
+  type CreateIssueFields,
 } from './client.js';
 
 const FIELDS = [
@@ -47,7 +50,11 @@ export async function run(action: string | undefined, argv: string[]): Promise<A
       return issues(argv);
     case 'comments':
       return comments(argv);
+    case 'search':
+      return search(argv);
     // --- write actions (guarded) -------------------------------------------
+    case 'create':
+      return create(argv);
     case 'comment':
       return comment(argv);
     case 'transition':
@@ -155,6 +162,79 @@ function inRange(iso: string | undefined, fromMs: number, untilMs: number): bool
   return t >= fromMs && t <= untilMs;
 }
 
+/** Default fields returned by `search` (extra ones added via --fields). */
+const SEARCH_FIELDS = [
+  'summary',
+  'status',
+  'assignee',
+  'reporter',
+  'created',
+  'updated',
+  'parent',
+  'issuetype',
+];
+
+/**
+ * loom jira search --jql "..." [--limit 50] [--fields a,b]
+ *
+ * Run an arbitrary JQL query and return matching issues. Unlike `issues` (which
+ * defaults to your involved issues), this requires an explicit --jql and emits
+ * a richer per-issue shape (key, summary, status, assignee, reporter, parent…).
+ */
+async function search(argv: string[]): Promise<ActivityEvent[]> {
+  const { base, email, token, flags } = context(argv);
+  const jql = requireStr(flags, 'jql', 'search: --jql "<query>" is required');
+  const limit = parseLimit(flags.limit);
+  const fields = [...new Set([...SEARCH_FIELDS, ...csv(flags.fields)])];
+
+  const raw = await searchIssues({ base, email, token, jql, fields, maxResults: limit });
+  return raw.slice(0, limit).map((i) => searchToEvent(i, base));
+}
+
+/** Parse --limit into a positive integer; default 50. */
+function parseLimit(value: string | boolean | undefined): number {
+  if (typeof value !== 'string') return 50;
+  const n = Number(value);
+  if (!Number.isInteger(n) || n <= 0) {
+    throw usage(`search: --limit must be a positive integer, got "${value}"`);
+  }
+  return n;
+}
+
+/**
+ * Map a search hit to an ActivityEvent. The spec's required object shape (key,
+ * summary, status, assignee{displayName,accountId}, reporter, created, updated,
+ * parent, url) is carried verbatim in `raw` so `--json` exposes it.
+ */
+function searchToEvent(issue: JiraIssue, base: string): ActivityEvent {
+  const f = issue.fields;
+  const status = f.status?.name ?? 'Unknown';
+  const url = `${base}/browse/${issue.key}`;
+  const person = (p: { displayName?: string; accountId?: string } | null | undefined) =>
+    p ? { displayName: p.displayName ?? null, accountId: p.accountId ?? null } : null;
+  const shape = {
+    key: issue.key,
+    summary: f.summary ?? null,
+    status,
+    assignee: person(f.assignee),
+    reporter: person(f.reporter),
+    created: f.created ?? null,
+    updated: f.updated ?? null,
+    parent: f.parent?.key ?? null,
+    issuetype: f.issuetype?.name ?? null,
+    url,
+  };
+  return {
+    timestamp: f.updated ?? f.created ?? '',
+    source: 'jira',
+    type: 'issue',
+    ref: issue.key,
+    title: `${issue.key} [${status}]: ${f.summary ?? ''}`,
+    url,
+    raw: shape,
+  };
+}
+
 // ===========================================================================
 // Write actions. Every one is guarded the same way as `tempo log`:
 //   1. needs Atlassian credentials (resolved by context()),
@@ -164,6 +244,105 @@ function inRange(iso: string | undefined, fromMs: number, untilMs: number): bool
 //      preview-only with --dry-run).
 // Human-facing preview/success text goes to stderr so stdout stays clean JSON.
 // ===========================================================================
+
+/**
+ * loom jira create --type "Feil" --summary "..." [--project KEY] [--parent KEY]
+ *   [--description "..."] [--assignee me|<accountId>] [--labels a,b]
+ *   [--dry-run] [--yes]
+ *
+ * Create an issue, guarded like the other writes. The project defaults to the
+ * parent's project key when --parent is given. The issue type *name* (e.g.
+ * "Feil") is resolved against the project's createmeta to an id.
+ */
+async function create(argv: string[]): Promise<ActivityEvent[]> {
+  const { base, email, token, flags } = context(argv);
+  const summary = requireStr(flags, 'summary', 'create: --summary "<text>" is required');
+  const typeName = requireStr(flags, 'type', 'create: --type "<issue type name>" is required (e.g. "Feil")');
+  const parent = optStr(flags, 'parent');
+  // Project: explicit --project, else inferred from the parent's key prefix.
+  let project = optStr(flags, 'project');
+  if (!project && parent) project = projectKeyOf(parent);
+  if (!project) {
+    throw usage('create: --project <KEY> is required (or pass --parent to infer it)');
+  }
+  const description = optStr(flags, 'description');
+  const assigneeFlag = optStr(flags, 'assignee');
+  const labels = csv(flags.labels);
+
+  // Resolve the issue type name → id against the project's createmeta.
+  const types = await getCreateMetaIssueTypes(base, email, token, project);
+  const type = types.find((t) => eqi(t.name, typeName));
+  if (!type) {
+    const available = types.map((t) => `"${t.name}"`).join(', ');
+    throw new Error(
+      `create: issue type "${typeName}" is not available in project ${project}. ` +
+        `Available: ${available || '(none — check the project key / your permissions)'}.`
+    );
+  }
+
+  // Resolve assignee: "me" → the authenticated user; otherwise a literal accountId.
+  let assigneeId: string | undefined;
+  let assigneeLabel: string | undefined;
+  if (assigneeFlag) {
+    if (/^me$/i.test(assigneeFlag)) {
+      assigneeId = await getMyAccountId(base, email, token);
+      assigneeLabel = 'me';
+    } else {
+      assigneeId = assigneeFlag;
+      assigneeLabel = assigneeFlag;
+    }
+  }
+
+  const fields: CreateIssueFields = {
+    project: { key: project },
+    issuetype: { id: type.id },
+    summary,
+  };
+  if (description) fields.description = textToAdf(description);
+  if (parent) fields.parent = { key: parent };
+  if (assigneeId) fields.assignee = { accountId: assigneeId };
+  if (labels.length) fields.labels = labels;
+
+  const planLines = [
+    `About to create a ${type.name} in ${project}:`,
+    `  summary:     ${preview(summary)}`,
+    ...(parent ? [`  parent:      ${parent}`] : []),
+    ...(description ? [`  description: ${preview(description)}`] : []),
+    ...(assigneeLabel ? [`  assignee:    ${assigneeLabel}`] : []),
+    ...(labels.length ? [`  labels:      ${labels.join(', ')}`] : []),
+  ];
+  const plan = planLines.join('\n');
+
+  if (flags['dry-run']) {
+    stderr.write(
+      plan +
+        '\npayload:\n' +
+        indent(JSON.stringify({ fields }, null, 2)) +
+        '\n(dry-run — nothing was created.)\n'
+    );
+    return [createEvent('(preview)', summary, base)];
+  }
+  if (!(await confirmOrAbort(plan, flags))) return [];
+
+  const created = await createIssue(base, email, token, fields);
+  stderr.write(`✅ Created ${created.key} — ${base}/browse/${created.key}\n`);
+  return [createEvent(created.key, summary, base)];
+}
+
+/** The project key prefix of an issue key, e.g. "UKESASADF" from "UKESASADF-1190". */
+function projectKeyOf(issueKey: string): string {
+  const dash = issueKey.lastIndexOf('-');
+  return dash > 0 ? issueKey.slice(0, dash) : issueKey;
+}
+
+/** Convert plain text to a minimal Atlassian Document Format doc (one paragraph per line). */
+function textToAdf(text: string): unknown {
+  const paragraphs = text.split('\n').map((line) => ({
+    type: 'paragraph',
+    content: line ? [{ type: 'text', text: line }] : [],
+  }));
+  return { type: 'doc', version: 1, content: paragraphs };
+}
 
 /** loom jira comment --key K --body "..." [--dry-run] [--yes] */
 async function comment(argv: string[]): Promise<ActivityEvent[]> {
@@ -599,6 +778,20 @@ function statusEvent(
   };
 }
 
+/** Event for a created (or previewed) issue — `raw` carries {key, url}. */
+function createEvent(key: string, summary: string, base: string): ActivityEvent {
+  const url = `${base}/browse/${key}`;
+  return {
+    timestamp: '',
+    source: 'jira',
+    type: 'create',
+    ref: key,
+    title: `Created ${key}: ${summary}`,
+    url,
+    raw: { key, url },
+  };
+}
+
 function updateEvent(
   key: string,
   field: string,
@@ -668,7 +861,11 @@ function usage(reason: string): Error {
       '  read:\n' +
       '    loom jira issues   [--since 7d] [--until DATE] [--jql "..."]\n' +
       '    loom jira comments [--key ABC-1,ABC-2] [--all] [--since 7d]\n' +
+      '    loom jira search   --jql "..." [--limit 50] [--fields a,b]\n' +
       '  write (all guarded — confirm, or --dry-run / --yes):\n' +
+      '    loom jira create     --type "Feil" --summary "..." [--project KEY]\n' +
+      '                         [--parent KEY] [--description "..."]\n' +
+      '                         [--assignee me|<accountId>] [--labels a,b]\n' +
       '    loom jira comment    --key K --body "..."\n' +
       '    loom jira transition --key K --to "In Progress"\n' +
       '    loom jira describe   --key K --body "..."\n' +

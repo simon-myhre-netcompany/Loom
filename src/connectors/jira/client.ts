@@ -14,7 +14,9 @@ export interface JiraIssue {
     status?: { name?: string };
     issuetype?: { name?: string };
     priority?: { name?: string };
-    assignee?: { displayName?: string } | null;
+    assignee?: { displayName?: string; accountId?: string } | null;
+    reporter?: { displayName?: string; accountId?: string } | null;
+    parent?: { key?: string } | null;
     duedate?: string | null;
     created?: string;
     updated?: string;
@@ -29,6 +31,8 @@ export interface SearchParams {
   fields: string[];
   /** Safety cap on pages (100 issues each). */
   pageLimit?: number;
+  /** Stop once this many issues are collected (also caps each page's maxResults). */
+  maxResults?: number;
 }
 
 interface SearchResponse {
@@ -230,6 +234,57 @@ export async function addComment(
   );
 }
 
+/** An issue type available on a project, from createmeta. */
+export interface JiraIssueType {
+  id: string;
+  name: string;
+  subtask?: boolean;
+}
+
+/**
+ * Issue types creatable in a project — used to resolve a type name (e.g. "Feil")
+ * to the id the create API needs. Uses the granular createmeta endpoint.
+ */
+export async function getCreateMetaIssueTypes(
+  base: string,
+  email: string,
+  token: string,
+  projectKey: string
+): Promise<JiraIssueType[]> {
+  const headers = { Authorization: basicAuthHeader(email, token) };
+  const res = await fetchJson<{ issueTypes?: JiraIssueType[]; values?: JiraIssueType[] }>(
+    `${base}/rest/api/3/issue/createmeta/${encodeURIComponent(projectKey)}/issuetypes`,
+    { headers }
+  );
+  return res.issueTypes ?? res.values ?? [];
+}
+
+/** Fields sent to create a new issue. ADF description, parent, labels, etc. */
+export interface CreateIssueFields {
+  project: { key: string };
+  issuetype: { id: string };
+  summary: string;
+  description?: unknown;
+  parent?: { key: string };
+  assignee?: { accountId: string };
+  labels?: string[];
+}
+
+/** Create an issue. Returns the new key (and id). */
+export async function createIssue(
+  base: string,
+  email: string,
+  token: string,
+  fields: CreateIssueFields
+): Promise<{ id: string; key: string }> {
+  const headers = { Authorization: basicAuthHeader(email, token) };
+  return fetchJson<{ id: string; key: string }>(`${base}/rest/api/3/issue`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ fields }),
+  });
+}
+
 /** A field on a transition's screen (from expand=transitions.fields). */
 export interface TransitionFieldMeta {
   name?: string;
@@ -302,9 +357,12 @@ export async function updateIssueFields(
 }
 
 export async function searchIssues(params: SearchParams): Promise<JiraIssue[]> {
-  const { base, email, token, jql, fields, pageLimit = 10 } = params;
+  const { base, email, token, jql, fields, pageLimit = 10, maxResults } = params;
   const url = `${base}/rest/api/3/search/jql`;
   const headers = { Authorization: basicAuthHeader(email, token) };
+  // Each page asks for at most 100; when a caller wants fewer total, don't
+  // over-fetch — request just what's left.
+  const pageSize = maxResults && maxResults < 100 ? maxResults : 100;
 
   const all: JiraIssue[] = [];
   let nextPageToken: string | undefined;
@@ -312,7 +370,7 @@ export async function searchIssues(params: SearchParams): Promise<JiraIssue[]> {
   do {
     const body = JSON.stringify({
       jql,
-      maxResults: 100,
+      maxResults: pageSize,
       fields,
       ...(nextPageToken ? { nextPageToken } : {}),
     });
@@ -320,6 +378,7 @@ export async function searchIssues(params: SearchParams): Promise<JiraIssue[]> {
     all.push(...(res.issues ?? []));
     nextPageToken = res.nextPageToken;
     pages++;
+    if (maxResults && all.length >= maxResults) break;
   } while (nextPageToken && pages < pageLimit);
   return all;
 }
