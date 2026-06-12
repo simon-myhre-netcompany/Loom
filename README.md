@@ -18,7 +18,8 @@ for the full motivation, design, and roadmap.
 ## Status
 
 - ✅ **Tempo** worklogs — read your logged hours, **and log time** (write)
-- ✅ **GitHub** PRs & commits you authored, across accounts/orgs (read-only)
+- ✅ **GitHub** PRs, commits & comments/reviews you authored, across
+  accounts/orgs (read-only)
 - ✅ **Calendar** events — Apple Calendar via EventKit on macOS, ICS feed URLs
   (e.g. Outlook published calendars) everywhere else (read-only)
 - ✅ **Jira** issues you work on + your comments incl. `#TIL_KUNDE` (read-only)

@@ -74,6 +74,26 @@ function parseNextLink(link: string | null): string | undefined {
   return undefined;
 }
 
+/**
+ * List a plain (non-search) REST collection, following Link rel="next".
+ * `path` is e.g. "/repos/acme/foo/issues/12/comments"; `params` are appended.
+ */
+async function listAll<T>(
+  path: string,
+  params: Record<string, string>,
+  token: string
+): Promise<T[]> {
+  const qs = new URLSearchParams({ ...params, per_page: '100' });
+  let url: string | undefined = `${GITHUB_API}${path}?${qs}`;
+  const items: T[] = [];
+  while (url) {
+    const res = await ghFetch(url, token);
+    items.push(...((await res.json()) as T[]));
+    url = parseNextLink(res.headers.get('link'));
+  }
+  return items;
+}
+
 export interface GhPr {
   number: number;
   title: string;
@@ -110,4 +130,67 @@ export function searchAuthoredCommits(
   to: string
 ): Promise<GhCommit[]> {
   return searchAll<GhCommit>('/search/commits', `author:${login} author-date:${from}..${to}`, token);
+}
+
+/**
+ * Issues & PRs `login` commented on, with activity in the date range.
+ * The Search API requires every query to carry `is:issue` or `is:pull-request`,
+ * so this runs one search per kind and concatenates.
+ */
+export async function searchCommentedIssues(
+  token: string,
+  login: string,
+  from: string,
+  to: string
+): Promise<GhPr[]> {
+  const [issues, prs] = await Promise.all(
+    ['is:issue', 'is:pull-request'].map((kind) =>
+      searchAll<GhPr>('/search/issues', `commenter:${login} ${kind} updated:${from}..${to}`, token)
+    )
+  );
+  return [...issues, ...prs];
+}
+
+export interface GhComment {
+  id: number;
+  html_url: string;
+  body: string;
+  created_at: string;
+  user: { login: string } | null;
+  /** Review comments only: the file the inline comment is on. */
+  path?: string;
+}
+
+export interface GhReview {
+  id: number;
+  html_url: string;
+  body: string | null;
+  state: string;
+  submitted_at: string | null;
+  user: { login: string } | null;
+}
+
+/** Conversation comments on an issue or PR, created at/after `since` (ISO date). */
+export function listIssueComments(
+  token: string,
+  repo: string,
+  number: number,
+  since: string
+): Promise<GhComment[]> {
+  return listAll<GhComment>(`/repos/${repo}/issues/${number}/comments`, { since }, token);
+}
+
+/** Inline code-review comments on a PR, created at/after `since` (ISO date). */
+export function listReviewComments(
+  token: string,
+  repo: string,
+  number: number,
+  since: string
+): Promise<GhComment[]> {
+  return listAll<GhComment>(`/repos/${repo}/pulls/${number}/comments`, { since }, token);
+}
+
+/** Review summaries (approve / request changes / comment) on a PR. */
+export function listReviews(token: string, repo: string, number: number): Promise<GhReview[]> {
+  return listAll<GhReview>(`/repos/${repo}/pulls/${number}/reviews`, {}, token);
 }

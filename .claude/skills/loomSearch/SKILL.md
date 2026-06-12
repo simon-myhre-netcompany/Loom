@@ -17,7 +17,8 @@ Apps Loom can search:
 - **jira** — issues the user works on, and comments (theirs, or everyone's with
   `--all`).
 - **confluence** — pages they've edited (incl. their weekly status).
-- **github** — PRs & commits they authored (across accounts/orgs).
+- **github** — PRs & commits they authored, plus their comments & code reviews
+  on issues/PRs (everyone's with `--all`) — across accounts/orgs.
 - **slack** — messages: theirs by default, or any channel / person / free-text
   search they can see; `history` walks one channel completely (bot posts included).
 - **mail** — Apple Mail messages they sent or received.
@@ -39,6 +40,8 @@ loom jira comments --key ABC-123 --json            # the user's comments on one 
 loom jira comments --key ABC-123 --all --json      # the WHOLE thread (everyone)
 loom github prs --since 2w --json                  # PRs the user authored
 loom github commits --since 1w --json
+loom github comments --since 1w --json             # their comments & reviews on issues/PRs
+loom github comments --since 1w --all --json       # everyone's, on threads they commented in
 loom slack messages --since 1w --json              # messages the user sent
 loom slack messages --channel team-x --since 3d --json   # everyone's messages in #team-x
 loom slack messages --query "deploy failed" --json # free-text search

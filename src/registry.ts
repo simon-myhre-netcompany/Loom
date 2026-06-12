@@ -159,7 +159,7 @@ export const CONNECTORS: ConnectorSpec[] = [
     availability: () => envFamily('GITHUB_TOKEN')
       ? { state: 'ready', detail: 'credentials present' }
       : { state: 'unconfigured', detail: 'set GITHUB_TOKEN_<NAME> in .env' },
-    description: 'GitHub PRs & commits you authored (across accounts/orgs)',
+    description: 'GitHub PRs, commits & comments you authored (across accounts/orgs)',
     run: github.run,
     actions: [
       {
@@ -176,6 +176,16 @@ export const CONNECTORS: ConnectorSpec[] = [
         prompts: [
           { key: 'since', label: 'Look back how far? (e.g. 7d, 2w, YYYY-MM-DD)', default: '7d' },
           { key: 'until', label: 'Up until? (YYYY-MM-DD, blank = today)', prompt: false },
+        ],
+      },
+      {
+        name: 'comments',
+        description:
+          'Your comments & reviews on issues/PRs (--all for everyone\'s on those threads)',
+        prompts: [
+          { key: 'since', label: 'Look back how far? (e.g. 7d, 2w, YYYY-MM-DD)', default: '7d' },
+          { key: 'until', label: 'Up until? (YYYY-MM-DD, blank = today)', prompt: false },
+          { key: 'all', label: "Include everyone's comments on those threads? (--all)", prompt: false },
         ],
       },
     ],
