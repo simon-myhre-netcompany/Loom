@@ -2,11 +2,14 @@
  * Tempo connector — command handlers.
  *
  *   loom tempo worklogs [--since 7d] [--until YYYY-MM-DD] [--user <accountId>]
- *   loom tempo log --issue TIL-123 --hours 1.5 [--date YYYY-MM-DD]
+ *   loom tempo log --issue TIL-123 --hours 1.5 --account <value> [--date YYYY-MM-DD]
  *                    [--start HH:mm] [--description "..."] [--dry-run] [--yes]
+ *   loom tempo set-worklog-account --id <id[,id...]> --account <value|none>
  *
- * `log` is the one write path. It refuses to run without an account id (env
- * TEMPO_ACCOUNT_ID or --user) so we only ever create worklogs under that author.
+ * `log` refuses to run without an author id (env TEMPO_ACCOUNT_ID or --user) so
+ * we only ever create worklogs under that author, AND without an account
+ * (--account / TEMPO_DEFAULT_ACCOUNT) so the worklog can be transferred (JTI).
+ * `set-worklog-account` repairs worklogs that were created without an account.
  */
 import { stderr, stdin, stdout } from 'node:process';
 import type { ActivityEvent } from '../../types.js';
@@ -21,6 +24,8 @@ import {
 import { confirm } from '../../interactive.js';
 import {
   createWorklog,
+  getWorklog,
+  updateWorklog,
   getWorklogs,
   getAccounts,
   type TempoWorklog,
@@ -34,6 +39,15 @@ import {
  */
 const DEFAULT_ACCOUNT_FIELD = 'customfield_10039';
 
+/**
+ * The Tempo work-attribute key that holds a worklog's account. In this instance
+ * it's `_Overstyraccount_` (the per-worklog account override) and its value is
+ * the account key string, e.g. "DIG_UF-TJENESTELAG-FORVALTNING". A worklog
+ * without it has no account and cannot be transferred (JTI). Override with
+ * --account-attribute or TEMPO_ACCOUNT_ATTRIBUTE if your instance differs.
+ */
+const DEFAULT_ACCOUNT_ATTRIBUTE = '_Overstyraccount_';
+
 export async function run(action: string | undefined, argv: string[]): Promise<ActivityEvent[]> {
   switch (action) {
     case 'worklogs':
@@ -44,6 +58,8 @@ export async function run(action: string | undefined, argv: string[]): Promise<A
       return accounts(argv);
     case 'set-account':
       return setAccount(argv);
+    case 'set-worklog-account':
+      return setWorklogAccount(argv);
     case undefined:
       throw usage('missing action');
     default:
@@ -121,12 +137,35 @@ async function log(argv: string[]): Promise<ActivityEvent[]> {
   const descriptionArg = typeof flags.description === 'string' ? flags.description.trim() : '';
   const description = descriptionArg || summary || '';
 
+  // The account. A worklog without one can't be transferred (JTI), so we
+  // require an explicit choice: --account <value> (or TEMPO_DEFAULT_ACCOUNT),
+  // or --account none to deliberately skip it.
+  const attributeKey = flagOrEnv(
+    flags,
+    'account-attribute',
+    'TEMPO_ACCOUNT_ATTRIBUTE',
+    DEFAULT_ACCOUNT_ATTRIBUTE
+  )!;
+  const accountArg =
+    (typeof flags.account === 'string' ? flags.account.trim() : '') ||
+    (process.env.TEMPO_DEFAULT_ACCOUNT ?? '').trim();
+  if (!accountArg) {
+    throw usage(
+      'log: --account <value> is required (the worklog needs an account or it ' +
+        "can't be transferred). Pass --account none to deliberately log without one, " +
+        'or set TEMPO_DEFAULT_ACCOUNT in .env.'
+    );
+  }
+  const skipAccount = /^(none|clear|empty)$/i.test(accountArg);
+  const attributes = skipAccount ? undefined : [{ key: attributeKey, value: accountArg }];
+
   const planText = [
     'About to create a Tempo worklog:',
     `  issue:       ${issueLabel} (id ${issueId})`,
     `  date:        ${startDate} ${startTime}`,
     `  time:        ${hours}h (${timeSpentSeconds}s)`,
     `  author:      ${accountId}`,
+    `  account:     ${skipAccount ? '(none — will not transfer)' : accountArg}`,
     `  description: ${description || '(none)'}`,
   ].join('\n');
 
@@ -140,6 +179,7 @@ async function log(argv: string[]): Promise<ActivityEvent[]> {
         startDate,
         startTime,
         description: description || undefined,
+        ...(attributes ? { attributes: { values: attributes } } : {}),
       }),
     ];
   }
@@ -167,6 +207,7 @@ async function log(argv: string[]): Promise<ActivityEvent[]> {
     startDate,
     startTime,
     description,
+    attributes,
   });
   stdout.write(`✅ Created worklog ${created.tempoWorklogId ?? ''} on ${issueLabel}.\n`);
   return [toEvent(created)];
@@ -270,6 +311,100 @@ async function setAccount(argv: string[]): Promise<ActivityEvent[]> {
   await updateIssueFields(base, auth.email, auth.token, issue, { [fieldId]: value });
   stderr.write(`✅ Set Account on ${issue} to ${label}.\n`);
   return [accountWriteEvent(issue, label, base)];
+}
+
+/**
+ * Set the account work-attribute on one or more EXISTING worklogs (Tempo has no
+ * PATCH, so we GET each worklog and PUT it back with the attribute added).
+ * Repairs worklogs created without an account. Write path — confirms first.
+ *
+ *   loom tempo set-worklog-account --id <id[,id...]> --account <value|none>
+ *                   [--dry-run] [--yes]
+ */
+async function setWorklogAccount(argv: string[]): Promise<ActivityEvent[]> {
+  const flags = parseFlags(argv);
+
+  const token = flagOrEnv(flags, 'token', 'TEMPO_API_TOKEN');
+  if (!token) {
+    throw new Error(
+      'No Tempo token. Set TEMPO_API_TOKEN or pass --token. Run `loom guide tempo`.'
+    );
+  }
+
+  const idArg =
+    (typeof flags.id === 'string' ? flags.id : '') ||
+    (typeof flags.worklog === 'string' ? flags.worklog : '');
+  const ids = idArg
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((s) => Number(s));
+  if (!ids.length || ids.some((n) => !Number.isInteger(n) || n <= 0)) {
+    throw usage('set-worklog-account: --id <worklogId[,worklogId...]> is required (numeric).');
+  }
+
+  const accountArg = typeof flags.account === 'string' ? flags.account.trim() : '';
+  if (!accountArg) throw usage('set-worklog-account: --account <value|none> is required');
+  const attributeKey = flagOrEnv(
+    flags,
+    'account-attribute',
+    'TEMPO_ACCOUNT_ATTRIBUTE',
+    DEFAULT_ACCOUNT_ATTRIBUTE
+  )!;
+  const clear = /^(none|clear|empty)$/i.test(accountArg);
+
+  const plan =
+    `About to set ${clear ? 'no account' : `account "${accountArg}"`} ` +
+    `(${attributeKey}) on ${ids.length} worklog(s): ${ids.join(', ')}.`;
+  if (flags['dry-run']) {
+    stderr.write(plan + '\n(dry-run — nothing was changed.)\n');
+    return [];
+  }
+  if (!(flags.yes || flags.y)) {
+    if (!canPrompt(flags)) {
+      throw new Error(
+        'Refusing to change worklogs without confirmation. Re-run at a terminal ' +
+          'to confirm, pass --yes to skip the prompt, or --dry-run to preview.'
+      );
+    }
+    stderr.write(plan + '\n');
+    const ok = await confirm('Apply it?');
+    if (!ok) {
+      stderr.write('Aborted — no worklogs changed.\n');
+      return [];
+    }
+  }
+
+  const out: ActivityEvent[] = [];
+  for (const worklogId of ids) {
+    const w = await getWorklog(token, worklogId);
+    const issueId = w.issue?.id;
+    const author = w.author?.accountId;
+    if (issueId == null || author == null) {
+      stderr.write(`⚠️  Skipped worklog ${worklogId}: missing issue id or author.\n`);
+      continue;
+    }
+    // Preserve every other attribute; replace/append only the account one.
+    const others = (w.attributes?.values ?? []).filter((a) => a.key !== attributeKey);
+    const attributes = clear ? others : [...others, { key: attributeKey, value: accountArg }];
+
+    const updated = await updateWorklog({
+      token,
+      worklogId,
+      authorAccountId: author,
+      issueId,
+      timeSpentSeconds: w.timeSpentSeconds ?? 0,
+      startDate: w.startDate ?? '',
+      startTime: w.startTime ?? '09:00:00',
+      description: w.description ?? '',
+      attributes,
+    });
+    stderr.write(
+      `✅ Worklog ${worklogId} → ${clear ? '(no account)' : accountArg}.\n`
+    );
+    out.push(toEvent(updated));
+  }
+  return out;
 }
 
 /** Match an account by exact key (case-insensitive), else a unique name substring. */
@@ -406,9 +541,12 @@ function usage(reason: string): Error {
       'usage:\n' +
       '  loom tempo worklogs [--since 7d] [--until YYYY-MM-DD] [--user <accountId>]\n' +
       '  loom tempo accounts [--search <text>] [--all]\n' +
-      '  loom tempo log --issue <KEY|id> --hours <n> [--date YYYY-MM-DD]\n' +
-      '                   [--start HH:mm] [--description "..."] [--dry-run] [--yes]\n' +
+      '  loom tempo log --issue <KEY|id> --hours <n> --account <value|none>\n' +
+      '                   [--date YYYY-MM-DD] [--start HH:mm] [--description "..."]\n' +
+      '                   [--dry-run] [--yes]\n' +
       '  loom tempo set-account --issue <KEY> --account <key|id|none>\n' +
-      '                   [--dry-run] [--yes]   (write — confirms first)'
+      '                   [--dry-run] [--yes]   (write — confirms first)\n' +
+      '  loom tempo set-worklog-account --id <id[,id...]> --account <value|none>\n' +
+      '                   [--dry-run] [--yes]   (repair existing worklogs)'
   );
 }

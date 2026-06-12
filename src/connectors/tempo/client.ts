@@ -12,6 +12,12 @@ import { fetchJson, fetchPaginated } from '../../util/http.js';
 
 export const TEMPO_API_BASE = 'https://api.eu.tempo.io/4';
 
+/** A single Tempo work-attribute value as the API echoes / accepts it. */
+export interface WorklogAttribute {
+  key: string;
+  value: string;
+}
+
 /** Subset of the Tempo v4 worklog payload we rely on. */
 export interface TempoWorklog {
   tempoWorklogId?: number;
@@ -26,6 +32,9 @@ export interface TempoWorklog {
   createdAt?: string;
   updatedAt?: string;
   author?: { accountId?: string; self?: string };
+  // On reads Tempo wraps attributes as { values: [...] }; on writes it wants a
+  // bare array (see createWorklog/updateWorklog).
+  attributes?: { values?: WorklogAttribute[] };
 }
 
 /** A Tempo Account (billing/cost bucket worklogs are booked against). */
@@ -76,6 +85,12 @@ export interface CreateWorklogParams {
   /** HH:mm:ss. */
   startTime: string;
   description: string;
+  /**
+   * Tempo work-attributes (e.g. the account override `_Overstyraccount_`).
+   * Without this a worklog has no account, which blocks transfer (JTI). The
+   * `log` action always sets it unless explicitly told not to.
+   */
+  attributes?: WorklogAttribute[];
 }
 
 /**
@@ -83,9 +98,45 @@ export interface CreateWorklogParams {
  * Tempo echoes it back, so the caller can render it like a fetched one.
  */
 export async function createWorklog(params: CreateWorklogParams): Promise<TempoWorklog> {
-  const { token, ...body } = params;
+  const { token, attributes, ...rest } = params;
+  const body = { ...rest, ...(attributes && attributes.length ? { attributes } : {}) };
   return fetchJson<TempoWorklog>(`${TEMPO_API_BASE}/worklogs`, {
     method: 'POST',
+    token,
+    body: JSON.stringify(body),
+  });
+}
+
+/** Fetch a single worklog by its Tempo id (GET /4/worklogs/{id}). */
+export async function getWorklog(token: string, worklogId: number): Promise<TempoWorklog> {
+  return fetchJson<TempoWorklog>(`${TEMPO_API_BASE}/worklogs/${worklogId}`, { token });
+}
+
+export interface UpdateWorklogParams {
+  token: string;
+  worklogId: number;
+  authorAccountId: string;
+  issueId: number;
+  timeSpentSeconds: number;
+  /** YYYY-MM-DD. */
+  startDate: string;
+  /** HH:mm:ss. */
+  startTime: string;
+  description: string;
+  attributes?: WorklogAttribute[];
+}
+
+/**
+ * Replace a single worklog (PUT /4/worklogs/{id}). Tempo v4 has no PATCH, so
+ * the caller must pass the full worklog — fetch it first with `getWorklog`,
+ * then resend it with the desired attributes. Used to repair worklogs that were
+ * created without an account.
+ */
+export async function updateWorklog(params: UpdateWorklogParams): Promise<TempoWorklog> {
+  const { token, worklogId, attributes, ...rest } = params;
+  const body = { ...rest, ...(attributes && attributes.length ? { attributes } : {}) };
+  return fetchJson<TempoWorklog>(`${TEMPO_API_BASE}/worklogs/${worklogId}`, {
+    method: 'PUT',
     token,
     body: JSON.stringify(body),
   });

@@ -94,10 +94,11 @@ export const CONNECTORS: ConnectorSpec[] = [
       },
       {
         name: 'log',
-        description: 'Create a worklog (write — needs an account id; confirms first)',
+        description: 'Create a worklog (write — needs author id + account; confirms first)',
         prompts: [
           { key: 'issue', label: 'Issue key or numeric id (e.g. TIL-123)' },
           { key: 'hours', label: 'Hours spent (e.g. 1.5)' },
+          { key: 'account', label: 'Account value (e.g. DIG_UF-TJENESTELAG-FORVALTNING, or "none")' },
           { key: 'date', label: 'Work date (YYYY-MM-DD, blank = today)', prompt: false },
           { key: 'description', label: 'Description (blank = issue summary)', prompt: false },
         ],
@@ -115,6 +116,14 @@ export const CONNECTORS: ConnectorSpec[] = [
         prompts: [
           { key: 'issue', label: 'Issue key (e.g. SOT-169)' },
           { key: 'account', label: 'Account key, numeric id, or "none" to clear' },
+        ],
+      },
+      {
+        name: 'set-worklog-account',
+        description: 'WRITE: set the account on existing worklog(s) (repair; confirms)',
+        prompts: [
+          { key: 'id', label: 'Worklog id(s), comma-separated (e.g. 204211,204212)' },
+          { key: 'account', label: 'Account value, or "none" to clear' },
         ],
       },
     ],
