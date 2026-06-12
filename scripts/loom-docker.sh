@@ -22,11 +22,21 @@ args=(--rm -i)
 if [ -t 0 ] && [ -t 1 ]; then args+=(-t); fi
 
 # Secrets: mount .env read-only (not --env-file, which leaks values into
-# `docker inspect`). Loom's own loader picks it up at /app/.env.
-if [ -f .env ]; then args+=(-v "$PWD/.env:/app/.env:ro"); fi
+# `docker inspect`). Loom resolves ~/.config/loom/.env first, then the repo
+# .env at /app/.env — mount whichever the host has (XDG preferred).
+XDG_LOOM="${XDG_CONFIG_HOME:-$HOME/.config}/loom"
+if [ -f "$XDG_LOOM/.env" ]; then
+  args+=(-v "$XDG_LOOM/.env:/home/ubuntu/.config/loom/.env:ro")
+elif [ -f .env ]; then
+  args+=(-v "$PWD/.env:/app/.env:ro")
+fi
 
 # Credential *metadata* (expiry dates, no secrets) — read-write so
 # `loom keys add` works from inside the container too.
-if [ -f credentials.json ]; then args+=(-v "$PWD/credentials.json:/app/credentials.json"); fi
+if [ -f "$XDG_LOOM/credentials.json" ]; then
+  args+=(-v "$XDG_LOOM/credentials.json:/home/ubuntu/.config/loom/credentials.json")
+elif [ -f credentials.json ]; then
+  args+=(-v "$PWD/credentials.json:/app/credentials.json")
+fi
 
 exec docker run "${args[@]}" "$IMAGE" "$@"

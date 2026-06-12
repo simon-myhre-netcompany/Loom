@@ -8,12 +8,21 @@ const SLACK_API = 'https://slack.com/api';
 async function slackGet<T>(method: string, params: Record<string, string>, token: string): Promise<T> {
   const url = `${SLACK_API}/${method}?${new URLSearchParams(params)}`;
   let res: Response;
-  try {
-    res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-  } catch (err) {
-    throw new Error(`Network error contacting slack.com: ${(err as Error).message}`);
+  let data: T & { ok: boolean; error?: string };
+  // Slack rate-limits conversations.* hard for non-Marketplace apps (~1/min).
+  // Honor Retry-After a couple of times before giving up.
+  for (let attempt = 0; ; attempt++) {
+    try {
+      res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    } catch (err) {
+      throw new Error(`Network error contacting slack.com: ${(err as Error).message}`);
+    }
+    data = (await res.json()) as T & { ok: boolean; error?: string };
+    if (data.ok || data.error !== 'ratelimited' || attempt >= 2) break;
+    const wait = Math.min(parseInt(res.headers.get('retry-after') ?? '30', 10) || 30, 120);
+    process.stderr.write(`slack: ${method} rate-limited, retrying in ${wait}s…\n`);
+    await new Promise((r) => setTimeout(r, wait * 1000));
   }
-  const data = (await res.json()) as T & { ok: boolean; error?: string };
   if (!data.ok) {
     const e = data.error ?? 'unknown_error';
     const hint =

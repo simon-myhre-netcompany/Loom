@@ -115,12 +115,21 @@ async function history(argv: string[]): Promise<ActivityEvent[]> {
   const errors: string[] = [];
   for (const t of tokens) {
     let id = channelArg;
-    let name = channelArg;
+    let name = channelArg.replace(/^#/, '');
     try {
       if (!isId) {
-        const c = await findChannel(t.token, channelArg);
-        id = c.id;
-        name = c.name;
+        // Resolve the name to an id via a 1-result search first: search:read
+        // has sane rate limits, while conversations.list is ~1 req/min for
+        // non-Marketplace apps and Slack workspaces can hold 1000s of channels.
+        const probe = await searchMessages(t.token, `in:#${name}`, 1);
+        const hit = probe.find((m) => m.channel.name?.toLowerCase() === name.toLowerCase());
+        if (hit) {
+          id = hit.channel.id;
+        } else {
+          const c = await findChannel(t.token, name);
+          id = c.id;
+          name = c.name;
+        }
       }
       const msgs = await channelHistory(t.token, id, oldest, latest);
       return msgs.map((m) => historyToEvent(m, id, name));
